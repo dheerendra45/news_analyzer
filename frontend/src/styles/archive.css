@@ -13,7 +13,7 @@
 .page-header {
   background: linear-gradient(180deg, var(--charcoal) 0%, var(--obsidian) 100%);
   border-bottom: 1px solid var(--border-dark);
-  padding: 3rem 0 4rem;
+  padding: 6rem 0 4rem; /* Added extra top padding for fixed header */
 }
 
 .page-header-content {

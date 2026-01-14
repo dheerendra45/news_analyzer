@@ -25,19 +25,20 @@ const Layout = ({ children }) => {
   const location = useLocation();
   const hideNavbarRoutes = ["/login"];
   const hideFooterRoutes = ["/login", "/admin"];
-  
+
   // ReportDetail has its own navbar/footer
   const isReportPage = location.pathname.startsWith("/report/");
 
-  const shouldShowNavbar = !hideNavbarRoutes.includes(location.pathname) && !isReportPage;
-  const shouldShowFooter = !hideFooterRoutes.some((route) =>
-    location.pathname.startsWith(route)
-  ) && !isReportPage;
+  const shouldShowNavbar =
+    !hideNavbarRoutes.includes(location.pathname) && !isReportPage;
+  const shouldShowFooter =
+    !hideFooterRoutes.some((route) => location.pathname.startsWith(route)) &&
+    !isReportPage;
 
   return (
     <>
       {shouldShowNavbar && <Navbar />}
-      <main className={shouldShowNavbar ? "pt-[72px]" : ""}>{children}</main>
+      <main>{children}</main>
       {shouldShowFooter && <Footer />}
     </>
   );
