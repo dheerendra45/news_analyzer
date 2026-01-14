@@ -424,7 +424,7 @@ const ReportDetail = () => {
   // Loading State
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f4f5f3]">
+      <div className="min-h-screen bg-[#f4f5f3] pt-[72px]">
         <Navbar />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
@@ -440,7 +440,7 @@ const ReportDetail = () => {
   // Error State
   if (error) {
     return (
-      <div className="min-h-screen bg-[#f4f5f3]">
+      <div className="min-h-screen bg-[#f4f5f3] pt-[72px]">
         <Navbar />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center max-w-md">
@@ -463,7 +463,7 @@ const ReportDetail = () => {
   // Not Found State
   if (!report) {
     return (
-      <div className="min-h-screen bg-[#f4f5f3]">
+      <div className="min-h-screen bg-[#f4f5f3] pt-[72px]">
         <Navbar />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center max-w-md">
@@ -488,7 +488,7 @@ const ReportDetail = () => {
   // Generic API Report View (non-Goldman reports) - Minimal Detail View
   if (!report.isGoldmanFeatured) {
     return (
-      <div className="min-h-screen bg-[#f4f5f3]">
+      <div className="min-h-screen bg-[#f4f5f3] pt-[72px]">
         <Navbar />
 
         {/* Hero Section */}
