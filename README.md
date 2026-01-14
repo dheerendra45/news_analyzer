@@ -1,6 +1,11 @@
-# News Analyzer - Full Stack Application
+# News Analyzer - AI Workforce Intelligence Platform
 
-A production-ready full-stack application for managing AI-related news and reports with a React frontend and FastAPI backend.
+A production-ready full-stack application for tracking and analyzing AI-driven workforce transformations. Features a modern React frontend with auto-scrolling news feeds, intelligence cards, and a FastAPI backend with MongoDB.
+
+## 🌐 Live Demo
+
+- **Frontend**: Deploy on Vercel
+- **Backend**: Deploy on Railway/Render/Heroku
 
 ## 🏗️ Architecture
 
@@ -362,24 +367,71 @@ Admin Dashboard                     Public Pages
 
 ## 🚢 Production Deployment
 
-### Backend (e.g., Railway, Render, AWS)
+### Option 1: Deploy Frontend on Vercel
+
+1. **Push to GitHub** (Already done! ✅)
+
+   ```bash
+   git push origin main
+   ```
+
+2. **Import to Vercel**
+
+   - Go to [vercel.com](https://vercel.com)
+   - Click "Add New Project"
+   - Import `dheerendra45/news_analyzer`
+   - **Root Directory**: `frontend`
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+
+3. **Environment Variables** (in Vercel dashboard)
+
+   ```
+   VITE_API_URL=https://your-backend-url.com/api
+   ```
+
+4. Deploy! Your frontend will be live at `https://your-app.vercel.app`
+
+### Option 2: Deploy Backend on Railway/Render
+
+**Railway (Recommended)**:
+
+1. Go to [railway.app](https://railway.app)
+2. Create new project from GitHub repo
+3. Select the `backend` folder
+4. Add environment variables:
+   ```
+   MONGODB_URL=mongodb+srv://...
+   SECRET_KEY=your-production-secret-key
+   FRONTEND_URL=https://your-app.vercel.app
+   DEBUG=False
+   PORT=8000
+   ```
+5. Railway will auto-deploy! Copy the URL and add it to Vercel's `VITE_API_URL`
+
+**Render**:
+
+1. Go to [render.com](https://render.com)
+2. New Web Service → Connect GitHub repo
+3. **Root Directory**: `backend`
+4. **Build Command**: `pip install -r requirements.txt`
+5. **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+6. Add environment variables (same as above)
+
+### MongoDB Atlas (Database)
+
+1. Create free cluster at [mongodb.com/atlas](https://www.mongodb.com/atlas)
+2. Get connection string
+3. Add to backend environment variables as `MONGODB_URL`
+
+### Quick Deploy Summary
 
 ```bash
-# Set environment variables
-MONGODB_URL=mongodb+srv://...
-SECRET_KEY=your-production-secret-key
-FRONTEND_URL=https://your-frontend-domain.com
-DEBUG=False
-```
-
-### Frontend (e.g., Vercel, Netlify)
-
-```bash
-# Build for production
-npm run build
-
-# Environment variable
-VITE_API_URL=https://your-backend-api.com/api
+# 1. Code is already on GitHub ✅
+# 2. Vercel: Import repo → Set root to "frontend" → Deploy
+# 3. Railway/Render: Import repo → Set root to "backend" → Deploy
+# 4. Update VITE_API_URL in Vercel with backend URL
+# 5. Done! 🎉
 ```
 
 ## 📝 License
