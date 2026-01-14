@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
@@ -8,7 +8,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 // Public Pages
 import Landing from "./pages/Landing";
 import Archive from "./pages/Archive";
-import Reports from "./pages/Reports";
 import ReportDetail from "./pages/ReportDetail";
 import Login from "./pages/Login";
 
@@ -22,56 +21,49 @@ import "./styles/landing.css";
 import "./styles/archive.css";
 import "./styles/admin-cards.css";
 
+const Layout = ({ children }) => {
+  const location = useLocation();
+  const hideNavbarRoutes = ["/login"];
+  const hideFooterRoutes = ["/login", "/admin"];
+
+  const shouldShowNavbar = !hideNavbarRoutes.includes(location.pathname);
+  const shouldShowFooter = !hideFooterRoutes.some((route) =>
+    location.pathname.startsWith(route)
+  );
+
+  return (
+    <>
+      {shouldShowNavbar && <Navbar />}
+      <main className={shouldShowNavbar ? "pt-[72px]" : ""}>{children}</main>
+      {shouldShowFooter && <Footer />}
+    </>
+  );
+};
+
 const AppRoutes = () => {
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route
-        path="/"
-        element={
-          <>
-            <Navbar />
-            <Landing />
-            <Footer />
-          </>
-        }
-      />
-      <Route
-        path="/archive"
-        element={
-          <>
-            <Navbar />
-            <Archive />
-            <Footer />
-          </>
-        }
-      />
-      <Route
-        path="/reports"
-        element={
-          <>
-            <Navbar />
-            <Reports />
-            <Footer />
-          </>
-        }
-      />
-      <Route path="/report/:id" element={<ReportDetail />} />
-      <Route path="/login" element={<Login />} />
+    <Layout>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<Landing />} />
+        <Route path="/archive" element={<Archive />} />
+        <Route path="/report/:id" element={<ReportDetail />} />
+        <Route path="/login" element={<Login />} />
 
-      {/* Admin Routes */}
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute adminOnly>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      >
-        <Route path="cards" element={<CardsManager />} />
-        <Route path="reports" element={<ReportsManager />} />
-      </Route>
-    </Routes>
+        {/* Admin Routes */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute adminOnly>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="cards" element={<CardsManager />} />
+          <Route path="reports" element={<ReportsManager />} />
+        </Route>
+      </Routes>
+    </Layout>
   );
 };
 

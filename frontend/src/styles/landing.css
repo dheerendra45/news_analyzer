@@ -27,7 +27,7 @@
   color: var(--black);
   line-height: 1.7;
   font-size: 18px;
-  overflow-x: hidden;
+  /* Remove overflow-x: hidden to allow sticky positioning */
 }
 
 /* Hero Section */

@@ -30,6 +30,7 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 80px; /* Account for sticky header */
 }
 
 body {
@@ -38,6 +39,7 @@ body {
   color: var(--black);
   line-height: 1.7;
   font-size: 18px;
+  overflow-x: hidden; /* Prevent horizontal scroll globally */
 }
 
 /* Custom scrollbar */

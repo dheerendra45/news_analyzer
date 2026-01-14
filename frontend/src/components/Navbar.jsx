@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { LogOut, User, LayoutDashboard, Menu, X } from "lucide-react";
@@ -7,6 +7,7 @@ const Navbar = () => {
   const location = useLocation();
   const { user, logout, isAdmin, isAuthenticated } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   const isActive = (path) => location.pathname === path;
 
@@ -18,8 +19,22 @@ const Navbar = () => {
     setMobileMenuOpen(false);
   };
 
+  // Add scroll detection for enhanced shadow
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
-    <header className="bg-black/95 backdrop-blur-lg py-4 sticky top-0 z-50 border-b border-white/5">
+    <header
+      className={`bg-black/95 backdrop-blur-lg py-4 fixed top-0 left-0 right-0 z-50 border-b border-white/5 transition-shadow duration-300 ${
+        scrolled ? "shadow-lg shadow-black/20" : ""
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 flex justify-between items-center">
         {/* Logo */}
         <Link
@@ -48,16 +63,6 @@ const Navbar = () => {
             }`}
           >
             Archive
-          </Link>
-          <Link
-            to="/reports"
-            className={`font-inter text-sm font-medium transition-colors ${
-              isActive("/reports")
-                ? "text-white"
-                : "text-titanium hover:text-white"
-            }`}
-          >
-            Reports
           </Link>
 
           {/* Auth Section */}
@@ -135,17 +140,6 @@ const Navbar = () => {
             }`}
           >
             Archive
-          </Link>
-          <Link
-            to="/reports"
-            onClick={closeMobileMenu}
-            className={`font-inter text-sm font-medium px-6 py-3 transition-colors ${
-              isActive("/reports")
-                ? "text-white bg-white/5"
-                : "text-titanium hover:text-white hover:bg-white/5"
-            }`}
-          >
-            Reports
           </Link>
 
           {/* Mobile Auth Section */}
