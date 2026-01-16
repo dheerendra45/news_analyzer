@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { intelligenceCardsAPI } from "../../api/intelligenceCards";
+import { reportsAPI } from "../../api/reports";
 import {
   Plus,
   Search,
@@ -29,6 +30,7 @@ const CardsManager = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [availableReports, setAvailableReports] = useState([]);
 
   // Pagination & Filters
   const [page, setPage] = useState(1);
@@ -52,7 +54,17 @@ const CardsManager = () => {
   useEffect(() => {
     fetchCards();
     fetchStats();
+    fetchReports();
   }, [page, filters]);
+
+  const fetchReports = async () => {
+    try {
+      const response = await reportsAPI.getAll({ size: 100 });
+      setAvailableReports(response.items || []);
+    } catch (err) {
+      console.error("Failed to fetch reports:", err);
+    }
+  };
 
   function getEmptyFormData() {
     return {
@@ -104,7 +116,7 @@ const CardsManager = () => {
 
   const fetchStats = async () => {
     try {
-      const statsData = await intelligenceCardsAPI.getStats();
+      const statsData = await intelligenceCardsAPI.getAdminStats();
       setStats(statsData);
     } catch (err) {
       console.error("Failed to fetch stats:", err);
@@ -199,18 +211,38 @@ const CardsManager = () => {
     setSaving(true);
 
     try {
-      // Clean up stat objects - only include if they have values
+      // Transform stat objects to flat fields for backend API
       const cleanedData = {
-        ...formData,
-        stat1: formData.stat1.value ? formData.stat1 : null,
-        stat2: formData.stat2.value ? formData.stat2 : null,
-        stat3: formData.stat3.value ? formData.stat3 : null,
+        title: formData.title,
+        title_highlight: formData.title_highlight || "",
+        company: formData.company,
+        company_icon: formData.company_icon || "",
+        company_gradient: formData.company_gradient || "",
+        category: formData.category || "General",
+        excerpt: formData.excerpt || "",
+        tier: formData.tier || "tier_2",
+        tier_label: formData.tier_label || "Tier 2 Elevated",
+        status: formData.status || "draft",
+        is_featured: formData.is_featured || false,
+        display_order: parseInt(formData.display_order) || 0,
+        industry: formData.industry || null,
+        tags: formData.tags || [],
+        // Flatten stat objects to individual fields
+        stat1_value: formData.stat1?.value || null,
+        stat1_label: formData.stat1?.label || null,
+        stat2_value: formData.stat2?.value || null,
+        stat2_label: formData.stat2?.label || null,
+        stat2_type: formData.stat2?.type || null,
+        stat3_value: formData.stat3?.value || null,
+        stat3_label: formData.stat3?.label || null,
         rpi_score: formData.rpi_score || null,
         jobs_affected: formData.jobs_affected || null,
         ai_investment: formData.ai_investment || null,
         report_id: formData.report_id || null,
         analysis_url: formData.analysis_url || null,
       };
+
+      console.log("Sending card data:", cleanedData);
 
       if (editingCard) {
         await intelligenceCardsAPI.update(editingCard.id, cleanedData);
@@ -222,7 +254,13 @@ const CardsManager = () => {
       fetchCards();
       fetchStats();
     } catch (err) {
-      setError(editingCard ? "Failed to update card" : "Failed to create card");
+      console.error("Card save error:", err.response?.data || err);
+      const errorMsg =
+        err.response?.data?.detail ||
+        (editingCard ? "Failed to update card" : "Failed to create card");
+      setError(
+        typeof errorMsg === "string" ? errorMsg : JSON.stringify(errorMsg)
+      );
     } finally {
       setSaving(false);
     }
@@ -251,73 +289,6 @@ const CardsManager = () => {
         return "status-archived";
       default:
         return "";
-    }
-  };
-
-  const companyOptions = [
-    {
-      value: "amazon",
-      label: "Amazon",
-      icon: "A",
-      gradient: "amazon-gradient",
-    },
-    { value: "meta", label: "Meta", icon: "M", gradient: "meta-gradient" },
-    {
-      value: "google",
-      label: "Google",
-      icon: "G",
-      gradient: "google-gradient",
-    },
-    {
-      value: "microsoft",
-      label: "Microsoft",
-      icon: "M",
-      gradient: "microsoft-gradient",
-    },
-    { value: "apple", label: "Apple", icon: "🍎", gradient: "apple-gradient" },
-    { value: "tesla", label: "Tesla", icon: "T", gradient: "tesla-gradient" },
-    {
-      value: "nvidia",
-      label: "NVIDIA",
-      icon: "N",
-      gradient: "nvidia-gradient",
-    },
-    {
-      value: "jpmorgan",
-      label: "JP Morgan",
-      icon: "JP",
-      gradient: "jpmorgan-gradient",
-    },
-    {
-      value: "goldman",
-      label: "Goldman Sachs",
-      icon: "GS",
-      gradient: "goldman-gradient",
-    },
-    { value: "ibm", label: "IBM", icon: "IBM", gradient: "ibm-gradient" },
-    {
-      value: "salesforce",
-      label: "Salesforce",
-      icon: "SF",
-      gradient: "salesforce-gradient",
-    },
-    {
-      value: "walmart",
-      label: "Walmart",
-      icon: "W",
-      gradient: "walmart-gradient",
-    },
-  ];
-
-  const handleCompanySelect = (companyValue) => {
-    const company = companyOptions.find((c) => c.value === companyValue);
-    if (company) {
-      setFormData((prev) => ({
-        ...prev,
-        company: company.label,
-        company_icon: company.icon,
-        company_gradient: company.gradient,
-      }));
     }
   };
 
@@ -405,17 +376,13 @@ const CardsManager = () => {
             </select>
           </div>
           <div className="filter-group">
-            <select
+            <input
+              type="text"
               value={filters.company}
               onChange={(e) => handleFilterChange("company", e.target.value)}
-            >
-              <option value="">All Companies</option>
-              {companyOptions.map((company) => (
-                <option key={company.value} value={company.value}>
-                  {company.label}
-                </option>
-              ))}
-            </select>
+              placeholder="Filter by company..."
+              className="filter-input"
+            />
           </div>
         </div>
         <div className="search-group">
@@ -646,38 +613,52 @@ const CardsManager = () => {
                 <div className="form-row">
                   <div className="form-group">
                     <label>Company *</label>
-                    <select
-                      value={
-                        companyOptions.find((c) => c.label === formData.company)
-                          ?.value || ""
+                    <input
+                      type="text"
+                      value={formData.company}
+                      onChange={(e) =>
+                        handleFormChange("company", e.target.value)
                       }
-                      onChange={(e) => handleCompanySelect(e.target.value)}
+                      placeholder="e.g., Goldman Sachs, Amazon, Meta"
                       required
-                    >
-                      <option value="">Select Company</option>
-                      {companyOptions.map((company) => (
-                        <option key={company.value} value={company.value}>
-                          {company.label}
-                        </option>
-                      ))}
-                    </select>
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Company Icon</label>
+                    <input
+                      type="text"
+                      value={formData.company_icon}
+                      onChange={(e) =>
+                        handleFormChange("company_icon", e.target.value)
+                      }
+                      placeholder="e.g., GS, A, M (1-2 chars)"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Company Gradient</label>
+                    <input
+                      type="text"
+                      value={formData.company_gradient}
+                      onChange={(e) =>
+                        handleFormChange("company_gradient", e.target.value)
+                      }
+                      placeholder="e.g., goldman-gradient, amazon-gradient"
+                    />
                   </div>
                   <div className="form-group">
                     <label>Category *</label>
-                    <select
+                    <input
+                      type="text"
                       value={formData.category}
                       onChange={(e) =>
                         handleFormChange("category", e.target.value)
                       }
+                      placeholder="e.g., Layoffs, AI Investment, Automation"
                       required
-                    >
-                      <option value="Layoffs">Layoffs & Restructures</option>
-                      <option value="AI Investment">AI Investment</option>
-                      <option value="Automation">Automation Rollout</option>
-                      <option value="Hiring">Hiring Signals</option>
-                      <option value="Earnings">Earnings & Outlook</option>
-                      <option value="Robotics">Robotics</option>
-                    </select>
+                    />
                   </div>
                 </div>
 
@@ -934,27 +915,57 @@ const CardsManager = () => {
                 <h3>Links & References</h3>
 
                 <div className="form-row">
-                  <div className="form-group">
-                    <label>Report ID</label>
-                    <input
-                      type="text"
+                  <div className="form-group full-width">
+                    <label>Link to Report</label>
+                    <select
                       value={formData.report_id}
                       onChange={(e) =>
                         handleFormChange("report_id", e.target.value)
                       }
-                      placeholder="Link to detailed report"
-                    />
+                      className="report-select"
+                    >
+                      <option value="">— No linked report —</option>
+                      <optgroup label="⭐ Rich Reports (Recommended)">
+                        {availableReports
+                          .filter((r) => r.is_rich_report)
+                          .map((report) => (
+                            <option key={report.id} value={report.id}>
+                              ✨ {report.title}
+                            </option>
+                          ))}
+                      </optgroup>
+                      <optgroup label="📄 Standard Reports">
+                        {availableReports
+                          .filter((r) => !r.is_rich_report)
+                          .map((report) => (
+                            <option key={report.id} value={report.id}>
+                              {report.title}
+                            </option>
+                          ))}
+                      </optgroup>
+                    </select>
+                    <span className="help-text">
+                      ⭐ Rich Reports have animated stats, charts, and detailed sections.
+                      <br />
+                      Create a Rich Report first in Reports Manager, then link it here.
+                    </span>
                   </div>
+                </div>
+
+                <div className="form-row">
                   <div className="form-group">
-                    <label>Analysis URL</label>
+                    <label>Analysis URL (Alternative)</label>
                     <input
                       type="text"
                       value={formData.analysis_url}
                       onChange={(e) =>
                         handleFormChange("analysis_url", e.target.value)
                       }
-                      placeholder="Alternative URL for analysis"
+                      placeholder="External URL if no report"
                     />
+                    <span className="help-text">
+                      Only use this if you don't have a report to link
+                    </span>
                   </div>
                 </div>
 

@@ -2,7 +2,7 @@
 Report Pydantic schemas for request/response validation
 """
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 from app.models.report import ReportStatus
 
@@ -24,6 +24,21 @@ class ReportCreate(ReportBase):
     reading_time: Optional[int] = Field(None, ge=1)
     author: Optional[str] = None
     published_date: Optional[datetime] = None
+    # Rich report fields
+    subtitle: Optional[str] = None
+    label: Optional[str] = None
+    tier: Optional[str] = None
+    hero_stats: Optional[List[Dict[str, Any]]] = None
+    hero_context: Optional[str] = None
+    exec_summary: Optional[Dict[str, Any]] = None
+    metrics: Optional[List[Dict[str, Any]]] = None
+    data_table: Optional[List[Dict[str, Any]]] = None
+    rpi_analysis: Optional[Dict[str, Any]] = None
+    risk_buckets: Optional[List[Dict[str, Any]]] = None
+    timeline: Optional[List[Dict[str, Any]]] = None
+    guidance: Optional[List[Dict[str, Any]]] = None
+    sources: Optional[List[Dict[str, Any]]] = None
+    is_rich_report: bool = False
 
 
 # Update schema
@@ -39,6 +54,21 @@ class ReportUpdate(BaseModel):
     reading_time: Optional[int] = Field(None, ge=1)
     author: Optional[str] = None
     published_date: Optional[datetime] = None
+    # Rich report fields
+    subtitle: Optional[str] = None
+    label: Optional[str] = None
+    tier: Optional[str] = None
+    hero_stats: Optional[List[Dict[str, Any]]] = None
+    hero_context: Optional[str] = None
+    exec_summary: Optional[Dict[str, Any]] = None
+    metrics: Optional[List[Dict[str, Any]]] = None
+    data_table: Optional[List[Dict[str, Any]]] = None
+    rpi_analysis: Optional[Dict[str, Any]] = None
+    risk_buckets: Optional[List[Dict[str, Any]]] = None
+    timeline: Optional[List[Dict[str, Any]]] = None
+    guidance: Optional[List[Dict[str, Any]]] = None
+    sources: Optional[List[Dict[str, Any]]] = None
+    is_rich_report: Optional[bool] = None
 
 
 # Response schemas
@@ -58,6 +88,21 @@ class ReportResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
     created_by: Optional[str] = None
+    # Rich report fields
+    subtitle: Optional[str] = None
+    label: Optional[str] = None
+    tier: Optional[str] = None
+    hero_stats: Optional[List[Dict[str, Any]]] = None
+    hero_context: Optional[str] = None
+    exec_summary: Optional[Dict[str, Any]] = None
+    metrics: Optional[List[Dict[str, Any]]] = None
+    data_table: Optional[List[Dict[str, Any]]] = None
+    rpi_analysis: Optional[Dict[str, Any]] = None
+    risk_buckets: Optional[List[Dict[str, Any]]] = None
+    timeline: Optional[List[Dict[str, Any]]] = None
+    guidance: Optional[List[Dict[str, Any]]] = None
+    sources: Optional[List[Dict[str, Any]]] = None
+    is_rich_report: bool = False
 
     class Config:
         from_attributes = True

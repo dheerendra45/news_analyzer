@@ -3,6 +3,9 @@
   padding: 2rem;
   max-width: 1400px;
   margin: 0 auto;
+  background: var(--obsidian);
+  min-height: 100vh;
+  border-radius: 12px;
 }
 
 .cards-manager-header {
@@ -124,6 +127,31 @@
 .filter-group select:focus {
   border-color: var(--gold);
   outline: none;
+}
+
+.filter-group input,
+.filter-input {
+  background: var(--obsidian);
+  border: 1px solid var(--border-dark);
+  color: var(--white);
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  transition: border-color 0.2s ease;
+  width: 150px;
+}
+
+.filter-group input:hover,
+.filter-group input:focus,
+.filter-input:hover,
+.filter-input:focus {
+  border-color: var(--gold);
+  outline: none;
+}
+
+.filter-group input::placeholder,
+.filter-input::placeholder {
+  color: var(--slate-text);
 }
 
 .search-group {
@@ -773,6 +801,26 @@
   background: var(--obsidian);
   position: sticky;
   bottom: 0;
+}
+
+/* Report select styling */
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.report-select {
+  width: 100%;
+}
+
+.report-select optgroup {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--slate-text);
+  padding: 8px 0;
+}
+
+.report-select option {
+  padding: 8px 12px;
 }
 
 /* Responsive */

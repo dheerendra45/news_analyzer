@@ -292,19 +292,15 @@ const isGoldmanReport = (id) => {
   return id === "goldman-structural-shift" || id === "goldman";
 };
 
-// Check if the API report is a Goldman/Structural Shift report
-const isGoldmanAPIReport = (report) => {
+// Check if the API report should use rich report UI
+const isRichReport = (report) => {
   if (!report) return false;
-  const title = report.title?.toLowerCase() || "";
+  // Check if explicitly marked as rich report OR has rich data
   return (
-    title.includes("structural shift") ||
-    title.includes("goldman") ||
-    (report.tags &&
-      report.tags.some(
-        (tag) =>
-          tag.toLowerCase().includes("goldman") ||
-          tag.toLowerCase().includes("rpi")
-      ))
+    report.is_rich_report === true ||
+    (report.hero_stats && report.hero_stats.length > 0) ||
+    (report.timeline && report.timeline.length > 0) ||
+    report.hero_context
   );
 };
 
@@ -323,25 +319,24 @@ const ReportDetail = () => {
       setLoading(true);
       setError(null);
 
-      // Check if it's the special Goldman Sachs featured report (legacy route)
-      if (isGoldmanReport(id)) {
-        setReport({ ...goldmanReport, isGoldmanFeatured: true });
-        setLoading(false);
-        return;
-      }
-
-      // Fetch from API for all reports
+      // Try fetching from API first for all IDs (including goldman routes)
       try {
         const data = await reportsAPI.getById(id);
-        // Check if the fetched report is a Goldman-style report
-        const isGoldman = isGoldmanAPIReport(data);
-        if (isGoldman) {
-          // Merge API data with rich Goldman report data for consistent UI
-          setReport({ ...goldmanReport, ...data, isGoldmanFeatured: true });
-        } else {
-          setReport({ ...data, isGoldmanFeatured: false });
-        }
+        // Always use rich UI for all reports
+        // Sections are conditionally shown based on available data
+        setReport({ ...data, isGoldmanFeatured: true });
+        setLoading(false);
+        return;
       } catch (err) {
+        // If API fails for Goldman-style IDs, use static fallback
+        if (isGoldmanReport(id)) {
+          console.log("Using static Goldman report as fallback");
+          setReport({ ...goldmanReport, isGoldmanFeatured: true });
+          setLoading(false);
+          return;
+        }
+
+        // For other IDs, show error
         console.error("Error fetching report:", err);
         setError(
           err.response?.data?.detail ||
@@ -355,11 +350,22 @@ const ReportDetail = () => {
     fetchReport();
   }, [id]);
 
-  // Animate stats on mount (only for Goldman report)
+  // Animate stats on mount (only for rich reports)
   useEffect(() => {
-    if (!report?.isGoldmanFeatured) return;
+    if (!report?.isGoldmanFeatured || !report?.hero_stats?.length) return;
 
-    const targetValues = [54694, 30, 23];
+    // Extract numeric target values from hero_stats for animation
+    const parseNumericValue = (stat) => {
+      // Use target if available, otherwise parse from value
+      if (stat.target !== undefined) return stat.target;
+      if (!stat.value) return 0;
+      const str = String(stat.value).replace(/[^0-9.]/g, "");
+      return parseFloat(str) || 0;
+    };
+
+    const targetValues = report.hero_stats.map((stat) =>
+      parseNumericValue(stat)
+    );
     const duration = 2000;
     const startTime = Date.now();
 
@@ -368,11 +374,7 @@ const ReportDetail = () => {
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
 
-      setAnimatedStats([
-        Math.round(eased * targetValues[0]),
-        Math.round(eased * targetValues[1]),
-        Math.round(eased * targetValues[2]),
-      ]);
+      setAnimatedStats(targetValues.map((val) => Math.round(eased * val)));
 
       if (progress < 1) {
         requestAnimationFrame(animate);
@@ -381,19 +383,20 @@ const ReportDetail = () => {
 
     requestAnimationFrame(animate);
 
-    // Gauge animation
+    // Gauge animation for RPI score
+    const rpiScore = report.rpi_analysis?.score || 72;
     const gaugeInterval = setInterval(() => {
       setGaugeValue((prev) => {
-        if (prev >= 72) {
+        if (prev >= rpiScore) {
           clearInterval(gaugeInterval);
-          return 72;
+          return rpiScore;
         }
         return prev + 1;
       });
     }, 20);
 
     return () => clearInterval(gaugeInterval);
-  }, [report?.isGoldmanFeatured]);
+  }, [report?.isGoldmanFeatured, report?.hero_stats, report?.rpi_analysis]);
 
   const getTaskBarColor = (level) => {
     switch (level) {
@@ -485,8 +488,18 @@ const ReportDetail = () => {
     );
   }
 
-  // Generic API Report View (non-Goldman reports) - Minimal Detail View
-  if (!report.isGoldmanFeatured) {
+  // =====================================================
+  // RICH REPORT UI - Used for ALL reports (Goldman-style)
+  // =====================================================
+  // NOTE: The old minimal report view has been removed.
+  // All reports now use the same rich UI template.
+  // Sections are conditionally shown based on available data.
+
+  // We no longer need this check - all reports use rich UI:
+  // if (!report.isGoldmanFeatured) { ... }
+
+  // REMOVED: Generic API Report View - Now using rich UI for all reports
+  if (false) {
     return (
       <div className="min-h-screen bg-[#f4f5f3] pt-[72px]">
         <Navbar />
@@ -687,7 +700,7 @@ const ReportDetail = () => {
           <div className="flex items-center gap-3 sm:gap-5">
             <span className="hidden sm:flex font-inter text-xs text-mist items-center gap-2">
               <Clock size={14} />
-              {report.readingTime} min read
+              {report.reading_time || report.readingTime || 12} min read
             </span>
             <span className="font-inter text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider bg-crimson text-white px-2 sm:px-3 py-1 sm:py-1.5">
               Tier 1 Analysis
@@ -718,78 +731,118 @@ const ReportDetail = () => {
             <div className="flex items-center gap-3 mb-4 sm:mb-6">
               <div className="w-6 sm:w-10 h-px bg-crimson"></div>
               <span className="font-inter text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-crimson">
-                {report.label}
+                {report.label || "Workforce Intelligence Briefing"}
               </span>
             </div>
 
             <h1 className="font-playfair text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl text-white leading-tight mb-6 sm:mb-8">
-              The Structural <em className="text-crimson italic">Shift</em>
+              {report.title === "The Structural Shift" ? (
+                <>
+                  The Structural <em className="text-crimson italic">Shift</em>
+                </>
+              ) : (
+                report.title
+              )}
             </h1>
 
             <p className="font-crimson text-lg sm:text-xl text-titanium leading-relaxed mb-6 sm:mb-8 max-w-xl">
-              {report.subtitle}
+              {report.subtitle || report.summary}
             </p>
 
             <div className="font-inter text-sm text-mist py-4 sm:py-5 border-y border-white/10 mb-8 sm:mb-10 leading-relaxed">
               <strong className="text-crimson font-semibold">
                 Why this matters:
               </strong>{" "}
-              <span className="hidden sm:inline">{report.heroContext}</span>
+              <span className="hidden sm:inline">
+                {report.hero_context || report.heroContext || report.summary}
+              </span>
               <span className="sm:hidden">
-                {report.heroContext.substring(0, 150)}...
+                {(
+                  report.hero_context ||
+                  report.heroContext ||
+                  report.summary ||
+                  ""
+                ).substring(0, 150)}
+                ...
               </span>
             </div>
 
-            <div className="flex gap-3 sm:gap-4 flex-col sm:flex-row">
-              <a
-                href="#analysis"
-                className="font-inter text-[10px] sm:text-xs font-semibold uppercase tracking-wider px-6 sm:px-8 py-3 sm:py-4 bg-crimson text-white hover:bg-deep-crimson transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-crimson/30 text-center"
-              >
-                See Your Risk Score
-              </a>
-              <a
-                href="#guidance"
-                className="font-inter text-[10px] sm:text-xs font-semibold uppercase tracking-wider px-6 sm:px-8 py-3 sm:py-4 border border-white/30 text-white hover:border-white hover:bg-white/5 transition-all text-center"
-              >
-                Get Strategic Guidance
-              </a>
-            </div>
-          </div>
-
-          {/* Stats Panel */}
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 sm:p-8 lg:p-10">
-            <div className="font-inter text-[10px] font-semibold uppercase tracking-widest text-mist mb-6 sm:mb-8 pb-4 border-b border-white/10">
-              Key Findings at a Glance
-            </div>
-
-            {report.heroStats.map((stat, i) => (
-              <div key={i} className="mb-6 sm:mb-8 last:mb-0">
-                <div className="font-inter text-[10px] sm:text-xs text-mist uppercase tracking-wide mb-2">
-                  {stat.label}
-                </div>
-                <div
-                  className={`font-playfair text-3xl sm:text-4xl lg:text-5xl ${
-                    stat.accent ? "text-crimson" : "text-white"
-                  } mb-2`}
-                >
-                  {i === 0
-                    ? animatedStats[0].toLocaleString()
-                    : i === 1
-                    ? animatedStats[1] + "%"
-                    : animatedStats[2] + "M"}
-                </div>
-                <div className="font-crimson text-sm text-titanium italic">
-                  {stat.context}
-                </div>
-                <div className="h-1 bg-white/10 mt-3 overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-teal via-gold to-crimson transition-all duration-1000"
-                    style={{ width: `${stat.percent}%` }}
-                  ></div>
-                </div>
+            {/* CTA Buttons - Only show if we have analysis/guidance sections */}
+            {(report.rpi_analysis ||
+              report.rpiAnalysis ||
+              (report.guidance || []).length > 0) && (
+              <div className="flex gap-3 sm:gap-4 flex-col sm:flex-row">
+                {(report.rpi_analysis || report.rpiAnalysis) && (
+                  <a
+                    href="#analysis"
+                    className="font-inter text-[10px] sm:text-xs font-semibold uppercase tracking-wider px-6 sm:px-8 py-3 sm:py-4 bg-crimson text-white hover:bg-deep-crimson transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-crimson/30 text-center"
+                  >
+                    See Your Risk Score
+                  </a>
+                )}
+                {(report.guidance || []).length > 0 && (
+                  <a
+                    href="#guidance"
+                    className="font-inter text-[10px] sm:text-xs font-semibold uppercase tracking-wider px-6 sm:px-8 py-3 sm:py-4 border border-white/30 text-white hover:border-white hover:bg-white/5 transition-all text-center"
+                  >
+                    Get Strategic Guidance
+                  </a>
+                )}
               </div>
-            ))}
+            )}
           </div>
+
+          {/* Stats Panel - Only show if we have hero stats */}
+          {(report.hero_stats || report.heroStats || []).length > 0 && (
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 sm:p-8 lg:p-10">
+              <div className="font-inter text-[10px] font-semibold uppercase tracking-widest text-mist mb-6 sm:mb-8 pb-4 border-b border-white/10">
+                Key Findings at a Glance
+              </div>
+
+              {(report.hero_stats || report.heroStats || []).map((stat, i) => {
+                // Format the animated value with suffix
+                const formatAnimatedValue = () => {
+                  const value = animatedStats[i] || 0;
+                  const suffix = stat.suffix || "";
+                  // Format large numbers with commas
+                  if (value >= 1000 && !suffix) {
+                    return value.toLocaleString();
+                  }
+                  return value + suffix;
+                };
+
+                return (
+                  <div key={i} className="mb-6 sm:mb-8 last:mb-0">
+                    <div className="font-inter text-[10px] sm:text-xs text-mist uppercase tracking-wide mb-2">
+                      {stat.label}
+                    </div>
+                    <div
+                      className={`font-playfair text-3xl sm:text-4xl lg:text-5xl ${
+                        stat.accent ? "text-crimson" : "text-white"
+                      } mb-2`}
+                    >
+                      {formatAnimatedValue()}
+                    </div>
+                    <div className="font-crimson text-sm text-titanium italic">
+                      {stat.context}
+                    </div>
+                    <div className="h-1 bg-white/10 mt-3 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-teal via-gold to-crimson transition-all duration-1500"
+                        style={{
+                          width: `${
+                            animatedStats[i] > 0
+                              ? stat.percent || stat.barWidth || 0
+                              : 0
+                          }%`,
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 
@@ -799,532 +852,635 @@ const ReportDetail = () => {
           <div className="flex items-center gap-3 mb-4">
             <div className="w-6 sm:w-10 h-px bg-crimson"></div>
             <span className="font-inter text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-crimson">
-              Understanding the Shift
+              {report.context_label || "Understanding the Analysis"}
             </span>
           </div>
 
           <h2 className="font-playfair text-3xl sm:text-4xl lg:text-5xl mb-4 sm:mb-6">
-            What's Actually <em className="text-crimson italic">Happening</em>
+            {report.context_title ? (
+              <span
+                dangerouslySetInnerHTML={{
+                  __html: report.context_title.replace(
+                    /\*(.*?)\*/g,
+                    '<em class="text-crimson italic">$1</em>'
+                  ),
+                }}
+              />
+            ) : (
+              <>
+                What's Actually{" "}
+                <em className="text-crimson italic">Happening</em>
+              </>
+            )}
           </h2>
 
           <p className="font-crimson text-lg sm:text-xl text-charcoal max-w-3xl leading-relaxed mb-10 sm:mb-16">
-            In January 2026, Goldman Sachs released a stark assessment that sent
-            tremors through workforce planning circles: AI-driven layoffs will
-            persist through the year—not because companies are struggling, but
-            because automation has become the default strategy for staying
-            competitive.
+            {report.context_intro ||
+              report.summary ||
+              "This report examines the latest trends and provides comprehensive analysis of the current landscape."}
           </p>
+
+          {/* Main Content for Basic Reports (no exec_summary) */}
+          {!(report.exec_summary || report.execSummary) && report.content && (
+            <div className="prose prose-lg max-w-none mb-10 sm:mb-16">
+              <div
+                className="font-crimson text-lg text-charcoal leading-relaxed whitespace-pre-wrap"
+                dangerouslySetInnerHTML={{
+                  __html: report.content.replace(/\n/g, "<br/>"),
+                }}
+              />
+            </div>
+          )}
 
           {/* Executive Summary Card */}
-          <div className="grid lg:grid-cols-3 gap-0 bg-white border border-platinum mb-10 sm:mb-16">
-            <div className="lg:col-span-2 p-6 sm:p-8 lg:p-12 lg:border-r border-platinum">
-              <div className="font-inter text-[10px] font-semibold uppercase tracking-widest text-crimson mb-4 sm:mb-5">
-                Executive Summary
-              </div>
-              {report.execSummary.paragraphs.map((p, i) => (
-                <p
-                  key={i}
-                  className="font-crimson text-base sm:text-lg text-charcoal leading-relaxed mb-4 sm:mb-5 last:mb-0"
-                >
-                  {p}
-                </p>
-              ))}
-            </div>
-            <div className="p-6 sm:p-8 lg:p-12 flex flex-row lg:flex-col justify-around lg:justify-center border-t lg:border-t-0 border-platinum">
-              {report.execSummary.stats.map((stat, i) => (
-                <div
-                  key={i}
-                  className="mb-0 lg:mb-8 last:mb-0 text-center lg:text-left"
-                >
-                  <div className="font-playfair text-2xl sm:text-3xl lg:text-4xl text-crimson">
-                    {stat.value}
-                  </div>
-                  <div className="font-inter text-[10px] sm:text-xs uppercase tracking-wide text-gray-500 mt-1 sm:mt-2">
-                    {stat.label}
-                  </div>
+          {(report.exec_summary || report.execSummary) && (
+            <div className="grid lg:grid-cols-3 gap-0 bg-white border border-platinum mb-10 sm:mb-16">
+              <div className="lg:col-span-2 p-6 sm:p-8 lg:p-12 lg:border-r border-platinum">
+                <div className="font-inter text-[10px] font-semibold uppercase tracking-widest text-crimson mb-4 sm:mb-5">
+                  Executive Summary
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Methodology Panel */}
-          <div className="bg-black text-white p-6 sm:p-8 lg:p-12 relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal via-gold to-crimson"></div>
-            <div className="flex items-center gap-3 mb-4 sm:mb-5">
-              <BookOpen className="text-crimson" size={20} />
-              <span className="font-playfair text-xl sm:text-2xl">
-                How We Measure Automation Risk
-              </span>
-            </div>
-            <p className="font-inter text-sm text-titanium leading-relaxed mb-4 sm:mb-6">
-              This briefing applies Replaceable.ai's proprietary{" "}
-              <strong className="text-white">
-                Replaceability Potential Index (RPI™)
-              </strong>{" "}
-              methodology. Unlike simple "will AI take my job" predictions, RPI
-              breaks down each role into constituent tasks, scoring each on
-              Automation Probability (APS) and Human Resilience Factors (HRF).
-              The result is a nuanced view of which specific activities face
-              displacement—and which remain durably human.
-            </p>
-            <div className="flex gap-0.5 h-2 rounded overflow-hidden mb-3">
-              <div className="flex-1 bg-teal hover:scale-y-150 transition-transform cursor-pointer"></div>
-              <div className="flex-1 bg-slate hover:scale-y-150 transition-transform cursor-pointer"></div>
-              <div className="flex-1 bg-gold hover:scale-y-150 transition-transform cursor-pointer"></div>
-              <div className="flex-1 bg-crimson hover:scale-y-150 transition-transform cursor-pointer"></div>
-              <div className="flex-1 bg-deep-crimson hover:scale-y-150 transition-transform cursor-pointer"></div>
-            </div>
-            <div className="flex justify-between font-inter text-[8px] sm:text-[9px] text-mist uppercase tracking-wide">
-              <span>Low Risk (0-20)</span>
-              <span>Moderate (40-60)</span>
-              <span>Critical (80-100)</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Metrics Section */}
-      <section className="py-16 sm:py-24 lg:py-32 bg-[#f4f5f3]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-6 sm:w-10 h-px bg-crimson"></div>
-            <span className="font-inter text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-crimson">
-              The 2025 Reckoning
-            </span>
-          </div>
-
-          <h2 className="font-playfair text-3xl sm:text-4xl lg:text-5xl mb-4 sm:mb-6">
-            By the <em className="text-crimson italic">Numbers</em>
-          </h2>
-
-          <p className="font-crimson text-lg sm:text-xl text-charcoal max-w-3xl leading-relaxed mb-10 sm:mb-16">
-            Before diving into projections, let's ground ourselves in what
-            actually happened. The data comes from Challenger, Gray & Christmas
-            (the leading layoff tracking firm), SHRM workforce research, and
-            Goldman Sachs' own analysis.
-          </p>
-
-          {/* Metrics Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border border-platinum bg-white">
-            {report.metrics.map((metric, i) => (
-              <div
-                key={i}
-                className="p-6 sm:p-8 lg:p-10 border-b sm:border-r border-platinum last:border-r-0 sm:last:border-b-0 sm:[&:nth-child(2)]:border-r-0 lg:[&:nth-child(2)]:border-r group hover:bg-black transition-all duration-300"
-              >
-                <div className="font-inter text-[9px] sm:text-[10px] uppercase tracking-wider text-gray-500 mb-3 sm:mb-4 group-hover:text-mist transition-colors">
-                  {metric.label}
-                </div>
-                <div className="font-playfair text-3xl sm:text-4xl lg:text-5xl text-black mb-2 group-hover:text-white transition-colors">
-                  {metric.value}
-                </div>
-                <div
-                  className={`font-inter text-[10px] sm:text-xs font-semibold mb-2 sm:mb-3 ${
-                    metric.changeType === "negative"
-                      ? "text-crimson"
-                      : metric.changeType === "positive"
-                      ? "text-teal"
-                      : "text-gold"
-                  }`}
-                >
-                  {metric.change}
-                </div>
-                <div className="font-crimson text-sm text-gray-500 italic group-hover:text-titanium transition-colors">
-                  {metric.context}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Data Table */}
-          <div className="bg-white border border-platinum mt-8 sm:mt-10 overflow-hidden">
-            <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-              <span className="font-playfair text-lg sm:text-xl text-white">
-                Major AI-Cited Layoffs in 2025
-              </span>
-              <span className="font-inter text-[10px] sm:text-xs text-mist">
-                Companies that explicitly referenced AI in layoff announcements
-              </span>
-            </div>
-            {/* Mobile: Card View */}
-            <div className="block sm:hidden">
-              {report.layoffTable.map((row, i) => (
-                <div
-                  key={i}
-                  className="p-4 border-b border-platinum last:border-b-0"
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-inter font-semibold text-black">
-                      {row.company}
-                    </span>
-                    <span className="font-inter text-[9px] font-semibold uppercase tracking-wide bg-crimson text-white px-2 py-0.5">
-                      AI Cited
-                    </span>
-                  </div>
-                  <div className="font-crimson text-base text-charcoal mb-2">
-                    {row.jobs} jobs
-                  </div>
-                  <div className="font-crimson italic text-sm text-gray-600">
-                    {row.quote}
-                  </div>
-                </div>
-              ))}
-            </div>
-            {/* Desktop: Table View */}
-            <table className="hidden sm:table w-full">
-              <thead>
-                <tr className="bg-[#f4f5f3]">
-                  <th className="font-inter text-[10px] font-semibold uppercase tracking-wider text-gray-500 text-left px-4 lg:px-6 py-3 lg:py-4 border-b-2 border-black">
-                    Company
-                  </th>
-                  <th className="font-inter text-[10px] font-semibold uppercase tracking-wider text-gray-500 text-left px-4 lg:px-6 py-3 lg:py-4 border-b-2 border-black">
-                    Jobs Cut
-                  </th>
-                  <th className="font-inter text-[10px] font-semibold uppercase tracking-wider text-gray-500 text-left px-4 lg:px-6 py-3 lg:py-4 border-b-2 border-black">
-                    AI Cited
-                  </th>
-                  <th className="font-inter text-[10px] font-semibold uppercase tracking-wider text-gray-500 text-left px-4 lg:px-6 py-3 lg:py-4 border-b-2 border-black hidden md:table-cell">
-                    Executive Statement
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.layoffTable.map((row, i) => (
-                  <tr key={i} className="hover:bg-[#f4f5f3] transition-colors">
-                    <td className="font-inter font-semibold text-black px-4 lg:px-6 py-4 lg:py-5 border-b border-platinum">
-                      {row.company}
-                    </td>
-                    <td className="font-crimson text-base px-4 lg:px-6 py-4 lg:py-5 border-b border-platinum">
-                      {row.jobs}
-                    </td>
-                    <td className="px-4 lg:px-6 py-4 lg:py-5 border-b border-platinum">
-                      <span className="font-inter text-[9px] font-semibold uppercase tracking-wide bg-crimson text-white px-2 py-0.5">
-                        Yes
-                      </span>
-                    </td>
-                    <td className="font-crimson italic text-charcoal px-4 lg:px-6 py-4 lg:py-5 border-b border-platinum hidden md:table-cell">
-                      {row.quote}
-                    </td>
-                  </tr>
+                {(
+                  (report.exec_summary || report.execSummary)?.paragraphs || []
+                ).map((p, i) => (
+                  <p
+                    key={i}
+                    className="font-crimson text-base sm:text-lg text-charcoal leading-relaxed mb-4 sm:mb-5 last:mb-0"
+                  >
+                    {p}
+                  </p>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </div>
+              <div className="p-6 sm:p-8 lg:p-12 flex flex-row lg:flex-col justify-around lg:justify-center border-t lg:border-t-0 border-platinum">
+                {((report.exec_summary || report.execSummary)?.stats || []).map(
+                  (stat, i) => (
+                    <div
+                      key={i}
+                      className="mb-0 lg:mb-8 last:mb-0 text-center lg:text-left"
+                    >
+                      <div className="font-playfair text-2xl sm:text-3xl lg:text-4xl text-crimson">
+                        {stat.value}
+                      </div>
+                      <div className="font-inter text-[10px] sm:text-xs uppercase tracking-wide text-gray-500 mt-1 sm:mt-2">
+                        {stat.label}
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Methodology Panel - Only show if we have RPI analysis */}
+          {(report.rpi_analysis || report.rpiAnalysis) && (
+            <div className="bg-black text-white p-6 sm:p-8 lg:p-12 relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal via-gold to-crimson"></div>
+              <div className="flex items-center gap-3 mb-4 sm:mb-5">
+                <BookOpen className="text-crimson" size={20} />
+                <span className="font-playfair text-xl sm:text-2xl">
+                  How We Measure Automation Risk
+                </span>
+              </div>
+              <p className="font-inter text-sm text-titanium leading-relaxed mb-4 sm:mb-6">
+                This briefing applies Replaceable.ai's proprietary{" "}
+                <strong className="text-white">
+                  Replaceability Potential Index (RPI™)
+                </strong>{" "}
+                methodology. Unlike simple "will AI take my job" predictions,
+                RPI breaks down each role into constituent tasks, scoring each
+                on Automation Probability (APS) and Human Resilience Factors
+                (HRF). The result is a nuanced view of which specific activities
+                face displacement—and which remain durably human.
+              </p>
+              <div className="flex gap-0.5 h-2 rounded overflow-hidden mb-3">
+                <div className="flex-1 bg-teal hover:scale-y-150 transition-transform cursor-pointer"></div>
+                <div className="flex-1 bg-slate hover:scale-y-150 transition-transform cursor-pointer"></div>
+                <div className="flex-1 bg-gold hover:scale-y-150 transition-transform cursor-pointer"></div>
+                <div className="flex-1 bg-crimson hover:scale-y-150 transition-transform cursor-pointer"></div>
+                <div className="flex-1 bg-deep-crimson hover:scale-y-150 transition-transform cursor-pointer"></div>
+              </div>
+              <div className="flex justify-between font-inter text-[8px] sm:text-[9px] text-mist uppercase tracking-wide">
+                <span>Low Risk (0-20)</span>
+                <span>Moderate (40-60)</span>
+                <span>Critical (80-100)</span>
+              </div>
+            </div>
+          )}
+
+          {/* PDF Download - For reports without rich data */}
+          {report.pdf_url && (
+            <div className="mt-12 p-8 bg-white border border-platinum">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-playfair text-xl mb-2">
+                    Download Full Report
+                  </h3>
+                  <p className="font-inter text-sm text-gray-600">
+                    Get the complete PDF version of this report
+                  </p>
+                </div>
+                <a
+                  href={report.pdf_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 font-inter text-sm font-semibold uppercase tracking-wider px-6 py-3 bg-crimson text-white hover:bg-deep-crimson transition-all"
+                >
+                  <Download size={16} />
+                  Download PDF
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       </section>
+
+      {/* Metrics Section - Only show if we have metrics data */}
+      {(report.metrics || []).length > 0 && (
+        <section className="py-16 sm:py-24 lg:py-32 bg-[#f4f5f3]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-6 sm:w-10 h-px bg-crimson"></div>
+              <span className="font-inter text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-crimson">
+                {report.metrics_label || "Key Metrics"}
+              </span>
+            </div>
+
+            <h2 className="font-playfair text-3xl sm:text-4xl lg:text-5xl mb-4 sm:mb-6">
+              {report.metrics_title ? (
+                <span
+                  dangerouslySetInnerHTML={{
+                    __html: report.metrics_title.replace(
+                      /\*(.*?)\*/g,
+                      '<em class="text-crimson italic">$1</em>'
+                    ),
+                  }}
+                />
+              ) : (
+                <>
+                  By the <em className="text-crimson italic">Numbers</em>
+                </>
+              )}
+            </h2>
+
+            <p className="font-crimson text-lg sm:text-xl text-charcoal max-w-3xl leading-relaxed mb-10 sm:mb-16">
+              {report.metrics_intro ||
+                "Key data points and metrics from our analysis."}
+            </p>
+
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border border-platinum bg-white">
+              {(report.metrics || []).map((metric, i) => (
+                <div
+                  key={i}
+                  className="p-6 sm:p-8 lg:p-10 border-b sm:border-r border-platinum last:border-r-0 sm:last:border-b-0 sm:[&:nth-child(2)]:border-r-0 lg:[&:nth-child(2)]:border-r group hover:bg-black transition-all duration-300"
+                >
+                  <div className="font-inter text-[9px] sm:text-[10px] uppercase tracking-wider text-gray-500 mb-3 sm:mb-4 group-hover:text-mist transition-colors">
+                    {metric.label}
+                  </div>
+                  <div className="font-playfair text-3xl sm:text-4xl lg:text-5xl text-black mb-2 group-hover:text-white transition-colors">
+                    {metric.value}
+                  </div>
+                  <div
+                    className={`font-inter text-[10px] sm:text-xs font-semibold mb-2 sm:mb-3 ${
+                      metric.changeType === "negative"
+                        ? "text-crimson"
+                        : metric.changeType === "positive"
+                        ? "text-teal"
+                        : "text-gold"
+                    }`}
+                  >
+                    {metric.change}
+                  </div>
+                  <div className="font-crimson text-sm text-gray-500 italic group-hover:text-titanium transition-colors">
+                    {metric.context}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Data Table */}
+            {(report.data_table || report.layoffTable || []).length > 0 && (
+              <div className="bg-white border border-platinum mt-8 sm:mt-10 overflow-hidden">
+                <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                  <span className="font-playfair text-lg sm:text-xl text-white">
+                    Major AI-Cited Layoffs in 2025
+                  </span>
+                  <span className="font-inter text-[10px] sm:text-xs text-mist">
+                    Companies that explicitly referenced AI in layoff
+                    announcements
+                  </span>
+                </div>
+                {/* Mobile: Card View */}
+                <div className="block sm:hidden">
+                  {(report.data_table || report.layoffTable || []).map(
+                    (row, i) => (
+                      <div
+                        key={i}
+                        className="p-4 border-b border-platinum last:border-b-0"
+                      >
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="font-inter font-semibold text-black">
+                            {row.company}
+                          </span>
+                          <span className="font-inter text-[9px] font-semibold uppercase tracking-wide bg-crimson text-white px-2 py-0.5">
+                            AI Cited
+                          </span>
+                        </div>
+                        <div className="font-crimson text-base text-charcoal mb-2">
+                          {row.jobs} jobs
+                        </div>
+                        <div className="font-crimson italic text-sm text-gray-600">
+                          {row.quote}
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+                {/* Desktop: Table View */}
+                <table className="hidden sm:table w-full">
+                  <thead>
+                    <tr className="bg-[#f4f5f3]">
+                      <th className="font-inter text-[10px] font-semibold uppercase tracking-wider text-gray-500 text-left px-4 lg:px-6 py-3 lg:py-4 border-b-2 border-black">
+                        Company
+                      </th>
+                      <th className="font-inter text-[10px] font-semibold uppercase tracking-wider text-gray-500 text-left px-4 lg:px-6 py-3 lg:py-4 border-b-2 border-black">
+                        Jobs Cut
+                      </th>
+                      <th className="font-inter text-[10px] font-semibold uppercase tracking-wider text-gray-500 text-left px-4 lg:px-6 py-3 lg:py-4 border-b-2 border-black">
+                        AI Cited
+                      </th>
+                      <th className="font-inter text-[10px] font-semibold uppercase tracking-wider text-gray-500 text-left px-4 lg:px-6 py-3 lg:py-4 border-b-2 border-black hidden md:table-cell">
+                        Executive Statement
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(report.data_table || report.layoffTable || []).map(
+                      (row, i) => (
+                        <tr
+                          key={i}
+                          className="hover:bg-[#f4f5f3] transition-colors"
+                        >
+                          <td className="font-inter font-semibold text-black px-4 lg:px-6 py-4 lg:py-5 border-b border-platinum">
+                            {row.company}
+                          </td>
+                          <td className="font-crimson text-base px-4 lg:px-6 py-4 lg:py-5 border-b border-platinum">
+                            {row.jobs}
+                          </td>
+                          <td className="px-4 lg:px-6 py-4 lg:py-5 border-b border-platinum">
+                            <span className="font-inter text-[9px] font-semibold uppercase tracking-wide bg-crimson text-white px-2 py-0.5">
+                              Yes
+                            </span>
+                          </td>
+                          <td className="font-crimson italic text-charcoal px-4 lg:px-6 py-4 lg:py-5 border-b border-platinum hidden md:table-cell">
+                            {row.quote}
+                          </td>
+                        </tr>
+                      )
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* RPI Analysis Section */}
-      <section className="py-16 sm:py-24 lg:py-32 bg-white" id="analysis">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-6 sm:w-10 h-px bg-crimson"></div>
-            <span className="font-inter text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-crimson">
-              Replaceability Analysis
-            </span>
-          </div>
-
-          <h2 className="font-playfair text-3xl sm:text-4xl lg:text-5xl mb-4 sm:mb-6">
-            Quantifying <em className="text-crimson italic">Your</em> Exposure
-          </h2>
-
-          <p className="font-crimson text-lg sm:text-xl text-charcoal max-w-3xl leading-relaxed mb-10 sm:mb-16">
-            Abstract statistics only go so far. To understand what "structural
-            automation" actually means, we need to examine specific roles at the
-            task level. Below, we've applied RPI methodology to the
-            Administrative Support Worker category—one of the highest-exposure
-            job families identified by SHRM.
-          </p>
-
-          {/* RPI Analysis Grid */}
-          <div className="grid lg:grid-cols-2 border border-platinum bg-white">
-            {/* Score Panel */}
-            <div className="bg-black p-8 sm:p-12 lg:p-16 flex flex-col items-center justify-center text-center">
-              <div className="font-playfair text-xl sm:text-2xl lg:text-3xl text-white mb-2">
-                {report.rpiAnalysis.role}
-              </div>
-              <div className="font-inter text-xs sm:text-sm text-mist mb-6 sm:mb-10">
-                {report.rpiAnalysis.workers} · {report.rpiAnalysis.salary}
-              </div>
-
-              {/* Gauge */}
-              <div className="relative w-36 h-36 sm:w-44 sm:h-44 lg:w-52 lg:h-52 mb-4 sm:mb-6">
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
-                  <circle
-                    cx="100"
-                    cy="100"
-                    r="80"
-                    fill="none"
-                    stroke="rgba(255,255,255,0.1)"
-                    strokeWidth="12"
-                  />
-                  <circle
-                    cx="100"
-                    cy="100"
-                    r="80"
-                    fill="none"
-                    stroke="#c41e3a"
-                    strokeWidth="12"
-                    strokeLinecap="round"
-                    strokeDasharray={`${(gaugeValue / 100) * 502}, 502`}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="font-playfair text-4xl sm:text-5xl lg:text-6xl text-white">
-                    {gaugeValue}%
-                  </span>
-                  <span className="font-inter text-[9px] sm:text-[10px] uppercase tracking-wider text-mist mt-1 sm:mt-2">
-                    Automatable
-                  </span>
-                </div>
-              </div>
-
-              <div className="font-inter text-xs sm:text-sm text-crimson">
-                ↑ 8 points from 2024 baseline
-              </div>
+      {(report.rpi_analysis || report.rpiAnalysis) && (
+        <section className="py-16 sm:py-24 lg:py-32 bg-white" id="analysis">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-6 sm:w-10 h-px bg-crimson"></div>
+              <span className="font-inter text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-crimson">
+                Replaceability Analysis
+              </span>
             </div>
 
-            {/* Task Breakdown */}
-            <div className="p-4 sm:p-6 lg:p-10">
-              <div className="font-inter text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-platinum">
-                Task-Level Breakdown
-              </div>
+            <h2 className="font-playfair text-3xl sm:text-4xl lg:text-5xl mb-4 sm:mb-6">
+              Quantifying <em className="text-crimson italic">Your</em> Exposure
+            </h2>
 
-              {/* Mobile: Simplified Cards */}
-              <div className="block lg:hidden space-y-4">
-                {report.rpiAnalysis.tasks.map((task, i) => (
-                  <div key={i} className="p-3 bg-gray-50 rounded">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-inter text-sm font-medium text-charcoal">
-                        {task.name}
-                      </span>
-                      <span className="font-inter text-xs text-gray-500">
-                        {task.weight}
-                      </span>
-                    </div>
-                    <div className="h-2 bg-platinum rounded overflow-hidden mb-2">
-                      <div
-                        className={`h-full rounded ${getTaskBarColor(
-                          task.level
-                        )}`}
-                        style={{ width: `${task.aps * 100}%` }}
-                      ></div>
-                    </div>
-                    <div className="flex gap-4 text-xs text-gray-500">
-                      <span>APS: {task.aps}</span>
-                      <span>HRF: {task.hrf}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <p className="font-crimson text-lg sm:text-xl text-charcoal max-w-3xl leading-relaxed mb-10 sm:mb-16">
+              Abstract statistics only go so far. To understand what "structural
+              automation" actually means, we need to examine specific roles at
+              the task level. Below, we've applied RPI methodology to the
+              Administrative Support Worker category—one of the highest-exposure
+              job families identified by SHRM.
+            </p>
 
-              {/* Desktop: Grid View */}
-              <div className="hidden lg:block">
-                {report.rpiAnalysis.tasks.map((task, i) => (
-                  <div
-                    key={i}
-                    className="grid grid-cols-[180px_1fr_50px_50px_50px] gap-4 items-center py-4 border-b border-platinum"
+            {/* RPI Analysis Grid */}
+            <div className="grid lg:grid-cols-2 border border-platinum bg-white">
+              {/* Score Panel */}
+              <div className="bg-black p-8 sm:p-12 lg:p-16 flex flex-col items-center justify-center text-center">
+                <div className="font-playfair text-xl sm:text-2xl lg:text-3xl text-white mb-2">
+                  {(report.rpi_analysis || report.rpiAnalysis)?.role}
+                </div>
+                <div className="font-inter text-xs sm:text-sm text-mist mb-6 sm:mb-10">
+                  {(report.rpi_analysis || report.rpiAnalysis)?.workers} ·{" "}
+                  {(report.rpi_analysis || report.rpiAnalysis)?.salary}
+                </div>
+
+                {/* Gauge */}
+                <div className="relative w-36 h-36 sm:w-44 sm:h-44 lg:w-52 lg:h-52 mb-4 sm:mb-6">
+                  <svg
+                    className="w-full h-full -rotate-90"
+                    viewBox="0 0 200 200"
                   >
-                    <div className="font-inter text-sm font-medium text-charcoal">
-                      {task.name}
-                    </div>
-                    <div className="h-2 bg-platinum rounded overflow-hidden">
-                      <div
-                        className={`h-full rounded ${getTaskBarColor(
-                          task.level
-                        )}`}
-                        style={{ width: `${task.aps * 100}%` }}
-                      ></div>
-                    </div>
-                    <div className="font-inter text-xs text-gray-500 text-center">
-                      {task.weight}
-                    </div>
-                    <div className="font-inter text-xs text-gray-500 text-center">
-                      {task.aps}
-                    </div>
-                    <div className="font-inter text-xs text-gray-500 text-center">
-                      {task.hrf}
-                    </div>
+                    <circle
+                      cx="100"
+                      cy="100"
+                      r="80"
+                      fill="none"
+                      stroke="rgba(255,255,255,0.1)"
+                      strokeWidth="12"
+                    />
+                    <circle
+                      cx="100"
+                      cy="100"
+                      r="80"
+                      fill="none"
+                      stroke="#c41e3a"
+                      strokeWidth="12"
+                      strokeLinecap="round"
+                      strokeDasharray={`${(gaugeValue / 100) * 502}, 502`}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="font-playfair text-4xl sm:text-5xl lg:text-6xl text-white">
+                      {gaugeValue}%
+                    </span>
+                    <span className="font-inter text-[9px] sm:text-[10px] uppercase tracking-wider text-mist mt-1 sm:mt-2">
+                      Automatable
+                    </span>
                   </div>
-                ))}
+                </div>
 
-                <div className="flex justify-between font-inter text-[10px] text-gray-500 uppercase tracking-wide pt-4 mt-4 border-t border-platinum">
-                  <span>Task</span>
-                  <div className="flex gap-8">
-                    <span>Weight</span>
-                    <span>APS</span>
-                    <span>HRF</span>
-                  </div>
+                <div className="font-inter text-xs sm:text-sm text-crimson">
+                  ↑ 8 points from 2024 baseline
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Insight Block */}
-          <div className="bg-black p-8 sm:p-12 lg:p-16 my-10 sm:my-16 relative overflow-hidden">
-            <span className="absolute -top-6 sm:-top-10 left-4 sm:left-10 font-playfair text-[120px] sm:text-[160px] lg:text-[200px] text-crimson/10 leading-none">
-              "
-            </span>
-            <div className="relative z-10 max-w-4xl">
-              <blockquote className="font-playfair text-xl sm:text-2xl lg:text-3xl italic text-white leading-relaxed mb-4 sm:mb-6">
-                We suspect some firms are trying to dress up layoffs as a good
-                news story rather than bad news, such as past over-hiring. AI
-                becomes the scapegoat for executives looking to cover for past
-                mistakes.
-              </blockquote>
-              <cite className="font-inter text-sm text-mist not-italic">
-                — Oxford Economics, January 2026 Research Briefing
-              </cite>
-            </div>
-          </div>
-
-          {/* Risk Buckets */}
-          <div className="flex items-center gap-3 mb-4 mt-12 sm:mt-16 lg:mt-20">
-            <div className="w-6 sm:w-10 h-px bg-crimson"></div>
-            <span className="font-inter text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-crimson">
-              Risk Stratification
-            </span>
-          </div>
-
-          <h2 className="font-playfair text-3xl sm:text-4xl lg:text-5xl mb-4 sm:mb-6">
-            The Automation <em className="text-crimson italic">Spectrum</em>
-          </h2>
-
-          <p className="font-crimson text-lg sm:text-xl text-charcoal max-w-3xl leading-relaxed mb-10 sm:mb-16">
-            Not all roles face equal displacement risk. Based on our RPI
-            analysis of over 800 occupations, we've identified three distinct
-            exposure categories. Understanding where your role falls is the
-            first step toward strategic adaptation.
-          </p>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-0 sm:border border-platinum">
-            {report.riskBuckets.map((bucket, i) => (
-              <div
-                key={i}
-                className={`p-6 sm:p-8 lg:p-12 bg-white border sm:border-0 sm:border-r border-platinum last:border-r-0 ${getBucketColor(
-                  bucket.type
-                )} hover:-translate-y-1 hover:shadow-xl transition-all group`}
-              >
-                <div className="font-playfair text-4xl sm:text-5xl lg:text-6xl text-platinum mb-4 sm:mb-5 group-hover:text-crimson transition-colors">
-                  {bucket.number}
+              {/* Task Breakdown */}
+              <div className="p-4 sm:p-6 lg:p-10">
+                <div className="font-inter text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-platinum">
+                  Task-Level Breakdown
                 </div>
-                <div className="font-playfair text-xl sm:text-2xl text-black mb-2">
-                  {bucket.title}
-                </div>
-                <div className="font-inter text-[10px] sm:text-xs uppercase tracking-wide text-gray-500 mb-4 sm:mb-6">
-                  {bucket.criteria}
-                </div>
-                <ul className="space-y-2">
-                  {bucket.items.map((item, j) => (
-                    <li
-                      key={j}
-                      className="font-crimson text-sm sm:text-base text-charcoal pl-4 sm:pl-5 relative leading-relaxed"
-                    >
-                      <span className="absolute left-0 text-gray-400">→</span>
-                      {item}
-                    </li>
+
+                {/* Mobile: Simplified Cards */}
+                <div className="block lg:hidden space-y-4">
+                  {(
+                    (report.rpi_analysis || report.rpiAnalysis)?.tasks || []
+                  ).map((task, i) => (
+                    <div key={i} className="p-3 bg-gray-50 rounded">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-inter text-sm font-medium text-charcoal">
+                          {task.name}
+                        </span>
+                        <span className="font-inter text-xs text-gray-500">
+                          {task.weight}
+                        </span>
+                      </div>
+                      <div className="h-2 bg-platinum rounded overflow-hidden mb-2">
+                        <div
+                          className={`h-full rounded ${getTaskBarColor(
+                            task.level
+                          )}`}
+                          style={{ width: `${task.aps * 100}%` }}
+                        ></div>
+                      </div>
+                      <div className="flex gap-4 text-xs text-gray-500">
+                        <span>APS: {task.aps}</span>
+                        <span>HRF: {task.hrf}</span>
+                      </div>
+                    </div>
                   ))}
-                </ul>
+                </div>
+
+                {/* Desktop: Grid View */}
+                <div className="hidden lg:block">
+                  {(
+                    (report.rpi_analysis || report.rpiAnalysis)?.tasks || []
+                  ).map((task, i) => (
+                    <div
+                      key={i}
+                      className="grid grid-cols-[180px_1fr_50px_50px_50px] gap-4 items-center py-4 border-b border-platinum"
+                    >
+                      <div className="font-inter text-sm font-medium text-charcoal">
+                        {task.name}
+                      </div>
+                      <div className="h-2 bg-platinum rounded overflow-hidden">
+                        <div
+                          className={`h-full rounded ${getTaskBarColor(
+                            task.level
+                          )}`}
+                          style={{ width: `${task.aps * 100}%` }}
+                        ></div>
+                      </div>
+                      <div className="font-inter text-xs text-gray-500 text-center">
+                        {task.weight}
+                      </div>
+                      <div className="font-inter text-xs text-gray-500 text-center">
+                        {task.aps}
+                      </div>
+                      <div className="font-inter text-xs text-gray-500 text-center">
+                        {task.hrf}
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="flex justify-between font-inter text-[10px] text-gray-500 uppercase tracking-wide pt-4 mt-4 border-t border-platinum">
+                    <span>Task</span>
+                    <div className="flex gap-8">
+                      <span>Weight</span>
+                      <span>APS</span>
+                      <span>HRF</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            ))}
+            </div>
+
+            {/* Insight Block */}
+            <div className="bg-black p-8 sm:p-12 lg:p-16 my-10 sm:my-16 relative overflow-hidden">
+              <span className="absolute -top-6 sm:-top-10 left-4 sm:left-10 font-playfair text-[120px] sm:text-[160px] lg:text-[200px] text-crimson/10 leading-none">
+                "
+              </span>
+              <div className="relative z-10 max-w-4xl">
+                <blockquote className="font-playfair text-xl sm:text-2xl lg:text-3xl italic text-white leading-relaxed mb-4 sm:mb-6">
+                  We suspect some firms are trying to dress up layoffs as a good
+                  news story rather than bad news, such as past over-hiring. AI
+                  becomes the scapegoat for executives looking to cover for past
+                  mistakes.
+                </blockquote>
+                <cite className="font-inter text-sm text-mist not-italic">
+                  — Oxford Economics, January 2026 Research Briefing
+                </cite>
+              </div>
+            </div>
+
+            {/* Risk Buckets */}
+            {(report.risk_buckets || report.riskBuckets || []).length > 0 && (
+              <>
+                <div className="flex items-center gap-3 mb-4 mt-12 sm:mt-16 lg:mt-20">
+                  <div className="w-6 sm:w-10 h-px bg-crimson"></div>
+                  <span className="font-inter text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-crimson">
+                    Risk Stratification
+                  </span>
+                </div>
+
+                <h2 className="font-playfair text-3xl sm:text-4xl lg:text-5xl mb-4 sm:mb-6">
+                  The Automation{" "}
+                  <em className="text-crimson italic">Spectrum</em>
+                </h2>
+
+                <p className="font-crimson text-lg sm:text-xl text-charcoal max-w-3xl leading-relaxed mb-10 sm:mb-16">
+                  Not all roles face equal displacement risk. Based on our RPI
+                  analysis of over 800 occupations, we've identified three
+                  distinct exposure categories. Understanding where your role
+                  falls is the first step toward strategic adaptation.
+                </p>
+
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-0 sm:border border-platinum">
+                  {(report.risk_buckets || report.riskBuckets || []).map(
+                    (bucket, i) => (
+                      <div
+                        key={i}
+                        className={`p-6 sm:p-8 lg:p-12 bg-white border sm:border-0 sm:border-r border-platinum last:border-r-0 ${getBucketColor(
+                          bucket.type
+                        )} hover:-translate-y-1 hover:shadow-xl transition-all group`}
+                      >
+                        <div className="font-playfair text-4xl sm:text-5xl lg:text-6xl text-platinum mb-4 sm:mb-5 group-hover:text-crimson transition-colors">
+                          {bucket.number}
+                        </div>
+                        <div className="font-playfair text-xl sm:text-2xl text-black mb-2">
+                          {bucket.title}
+                        </div>
+                        <div className="font-inter text-[10px] sm:text-xs uppercase tracking-wide text-gray-500 mb-4 sm:mb-6">
+                          {bucket.criteria}
+                        </div>
+                        <ul className="space-y-2">
+                          {(bucket.items || []).map((item, j) => (
+                            <li
+                              key={j}
+                              className="font-crimson text-sm sm:text-base text-charcoal pl-4 sm:pl-5 relative leading-relaxed"
+                            >
+                              <span className="absolute left-0 text-gray-400">
+                                →
+                              </span>
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )
+                  )}
+                </div>
+              </>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Timeline Section */}
-      <section
-        className="py-16 sm:py-24 lg:py-32 bg-black relative overflow-hidden"
-        id="timeline"
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-teal/10 via-transparent to-gold/10"></div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 relative z-10">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-6 sm:w-10 h-px bg-crimson"></div>
-            <span className="font-inter text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-crimson">
-              Displacement Timeline
-            </span>
-          </div>
+      {(report.timeline || []).length > 0 && (
+        <section
+          className="py-16 sm:py-24 lg:py-32 bg-black relative overflow-hidden"
+          id="timeline"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-teal/10 via-transparent to-gold/10"></div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 relative z-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-6 sm:w-10 h-px bg-crimson"></div>
+              <span className="font-inter text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-crimson">
+                Displacement Timeline
+              </span>
+            </div>
 
-          <h2 className="font-playfair text-3xl sm:text-4xl lg:text-5xl text-white mb-4 sm:mb-6">
-            When Structural Becomes{" "}
-            <em className="text-crimson italic">Material</em>
-          </h2>
+            <h2 className="font-playfair text-3xl sm:text-4xl lg:text-5xl text-white mb-4 sm:mb-6">
+              When Structural Becomes{" "}
+              <em className="text-crimson italic">Material</em>
+            </h2>
 
-          <p className="font-crimson text-lg sm:text-xl text-titanium max-w-3xl leading-relaxed mb-10 sm:mb-16">
-            Knowing that change is coming matters less than knowing when. Based
-            on Goldman Sachs projections, enterprise adoption patterns, and
-            historical technology displacement curves, here's what the
-            transition looks like.
-          </p>
+            <p className="font-crimson text-lg sm:text-xl text-titanium max-w-3xl leading-relaxed mb-10 sm:mb-16">
+              Knowing that change is coming matters less than knowing when.
+              Based on Goldman Sachs projections, enterprise adoption patterns,
+              and historical technology displacement curves, here's what the
+              transition looks like.
+            </p>
 
-          {/* Timeline */}
-          <div className="relative pl-8 sm:pl-12 lg:pl-20 mt-10 sm:mt-16">
-            <div className="absolute left-2 sm:left-3 lg:left-5 top-0 bottom-0 w-0.5 bg-gradient-to-b from-teal via-gold to-crimson"></div>
+            {/* Timeline */}
+            <div className="relative pl-8 sm:pl-12 lg:pl-20 mt-10 sm:mt-16">
+              <div className="absolute left-2 sm:left-3 lg:left-5 top-0 bottom-0 w-0.5 bg-gradient-to-b from-teal via-gold to-crimson"></div>
 
-            {report.timeline.map((item, i) => (
-              <div
-                key={i}
-                className="relative pb-10 sm:pb-12 lg:pb-16 last:pb-0"
-              >
-                <div className="absolute -left-[22px] sm:-left-[33px] lg:-left-[60px] top-1.5 sm:top-2 w-3 h-3 sm:w-4 sm:h-4 bg-crimson rounded-full shadow-lg shadow-crimson/50"></div>
-                <div className="font-inter text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-crimson mb-2 sm:mb-3">
-                  {item.date}
+              {(report.timeline || []).map((item, i) => (
+                <div
+                  key={i}
+                  className="relative pb-10 sm:pb-12 lg:pb-16 last:pb-0"
+                >
+                  <div className="absolute -left-[22px] sm:-left-[33px] lg:-left-[60px] top-1.5 sm:top-2 w-3 h-3 sm:w-4 sm:h-4 bg-crimson rounded-full shadow-lg shadow-crimson/50"></div>
+                  <div className="font-inter text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-crimson mb-2 sm:mb-3">
+                    {item.date}
+                  </div>
+                  <div className="font-playfair text-xl sm:text-2xl lg:text-3xl text-white mb-2 sm:mb-3">
+                    {item.title}
+                  </div>
+                  <p className="font-crimson text-base sm:text-lg text-titanium leading-relaxed max-w-2xl">
+                    {item.desc}
+                  </p>
                 </div>
-                <div className="font-playfair text-xl sm:text-2xl lg:text-3xl text-white mb-2 sm:mb-3">
-                  {item.title}
-                </div>
-                <p className="font-crimson text-base sm:text-lg text-titanium leading-relaxed max-w-2xl">
-                  {item.desc}
-                </p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Guidance Section */}
-      <section className="py-16 sm:py-24 lg:py-32 bg-[#f4f5f3]" id="guidance">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-6 sm:w-10 h-px bg-crimson"></div>
-            <span className="font-inter text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-crimson">
-              Strategic Guidance
-            </span>
-          </div>
+      {(report.guidance || []).length > 0 && (
+        <section className="py-16 sm:py-24 lg:py-32 bg-[#f4f5f3]" id="guidance">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-6 sm:w-10 h-px bg-crimson"></div>
+              <span className="font-inter text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-crimson">
+                Strategic Guidance
+              </span>
+            </div>
 
-          <h2 className="font-playfair text-3xl sm:text-4xl lg:text-5xl mb-4 sm:mb-6">
-            What Should You <em className="text-crimson italic">Do Now</em>
-          </h2>
+            <h2 className="font-playfair text-3xl sm:text-4xl lg:text-5xl mb-4 sm:mb-6">
+              What Should You <em className="text-crimson italic">Do Now</em>
+            </h2>
 
-          <p className="font-crimson text-lg sm:text-xl text-charcoal max-w-3xl leading-relaxed mb-10 sm:mb-16">
-            Data without action is just anxiety fuel. Based on our analysis of
-            successful role transitions and emerging job categories, here are
-            concrete steps for workers in high-exposure categories.
-          </p>
+            <p className="font-crimson text-lg sm:text-xl text-charcoal max-w-3xl leading-relaxed mb-10 sm:mb-16">
+              Data without action is just anxiety fuel. Based on our analysis of
+              successful role transitions and emerging job categories, here are
+              concrete steps for workers in high-exposure categories.
+            </p>
 
-          <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
-            {report.guidance.map((card, i) => (
-              <div
-                key={i}
-                className="bg-white border border-platinum p-6 sm:p-8 lg:p-12 hover:border-crimson hover:shadow-xl transition-all"
-              >
-                <div className="font-playfair text-xl sm:text-2xl text-black mb-4 sm:mb-6">
-                  {card.title}
+            <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
+              {(report.guidance || []).map((card, i) => (
+                <div
+                  key={i}
+                  className="bg-white border border-platinum p-6 sm:p-8 lg:p-12 hover:border-crimson hover:shadow-xl transition-all"
+                >
+                  <div className="font-playfair text-xl sm:text-2xl text-black mb-4 sm:mb-6">
+                    {card.title}
+                  </div>
+                  <ul className="space-y-0">
+                    {(card.items || []).map((item, j) => (
+                      <li
+                        key={j}
+                        className="font-crimson text-sm sm:text-base text-charcoal py-2 sm:py-3 pl-5 sm:pl-6 relative border-b border-platinum last:border-b-0 leading-relaxed"
+                      >
+                        <span className="absolute left-0 top-2.5 sm:top-3.5 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-crimson"></span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <ul className="space-y-0">
-                  {card.items.map((item, j) => (
-                    <li
-                      key={j}
-                      className="font-crimson text-sm sm:text-base text-charcoal py-2 sm:py-3 pl-5 sm:pl-6 relative border-b border-platinum last:border-b-0 leading-relaxed"
-                    >
-                      <span className="absolute left-0 top-2.5 sm:top-3.5 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-crimson"></span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* CTA Section */}
       <section className="bg-crimson py-12 sm:py-16 lg:py-20">
@@ -1349,35 +1505,40 @@ const ReportDetail = () => {
       </section>
 
       {/* Sources Section */}
-      <section className="py-12 sm:py-16 lg:py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
-          <div className="bg-white border border-platinum p-6 sm:p-8 lg:p-12">
-            <div className="flex items-center gap-3 mb-6 sm:mb-8 pb-4 sm:pb-5 border-b border-platinum">
-              <BookOpen className="text-crimson" size={20} />
-              <span className="font-playfair text-xl sm:text-2xl">
-                Sources & References
-              </span>
-            </div>
-            <div className="grid sm:grid-cols-2 gap-x-8 lg:gap-x-12 gap-y-3 sm:gap-y-4">
-              {report.sources.map((source, i) => (
-                <div key={i} className="flex gap-2 sm:gap-3 font-inter text-sm">
-                  <span className="font-semibold text-crimson min-w-[16px] sm:min-w-[20px]">
-                    {source.num}
-                  </span>
-                  <div>
-                    <span className="text-charcoal hover:text-crimson transition-colors cursor-pointer">
-                      {source.text}
+      {(report.sources || []).length > 0 && (
+        <section className="py-12 sm:py-16 lg:py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
+            <div className="bg-white border border-platinum p-6 sm:p-8 lg:p-12">
+              <div className="flex items-center gap-3 mb-6 sm:mb-8 pb-4 sm:pb-5 border-b border-platinum">
+                <BookOpen className="text-crimson" size={20} />
+                <span className="font-playfair text-xl sm:text-2xl">
+                  Sources & References
+                </span>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-x-8 lg:gap-x-12 gap-y-3 sm:gap-y-4">
+                {(report.sources || []).map((source, i) => (
+                  <div
+                    key={i}
+                    className="flex gap-2 sm:gap-3 font-inter text-sm"
+                  >
+                    <span className="font-semibold text-crimson min-w-[16px] sm:min-w-[20px]">
+                      {source.num}
                     </span>
-                    <span className="block text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">
-                      {source.date}
-                    </span>
+                    <div>
+                      <span className="text-charcoal hover:text-crimson transition-colors cursor-pointer">
+                        {source.text}
+                      </span>
+                      <span className="block text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">
+                        {source.date}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Footer */}
       <footer className="bg-black py-12 sm:py-16 lg:py-20 border-t border-white/5">

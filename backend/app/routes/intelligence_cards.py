@@ -306,7 +306,7 @@ async def create_card(
         is_featured=card_data.is_featured,
         display_order=card_data.display_order,
         published_date=card_data.published_date,
-        created_by=str(admin_user["_id"]),
+        created_by=str(admin_user["id"]),
         industry=card_data.industry,
         tags=card_data.tags
     )

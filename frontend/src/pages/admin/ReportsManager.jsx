@@ -14,7 +14,22 @@ import {
   Upload,
   Save,
   FileText,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  Copy,
 } from "lucide-react";
+import {
+  HeroStatsBuilder,
+  ExecSummaryBuilder,
+  MetricsBuilder,
+  DataTableBuilder,
+  TimelineBuilder,
+  RiskBucketsBuilder,
+  GuidanceBuilder,
+  SourcesBuilder,
+  RpiAnalysisBuilder,
+} from "./RichReportBuilder";
 
 const ReportsManager = () => {
   const [reports, setReports] = useState([]);
@@ -28,6 +43,7 @@ const ReportsManager = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingReport, setEditingReport] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [showRichFields, setShowRichFields] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -41,6 +57,21 @@ const ReportsManager = () => {
     status: "draft",
     reading_time: "",
     author: "",
+    // Rich report fields
+    is_rich_report: false,
+    subtitle: "",
+    label: "",
+    tier: "tier_1",
+    hero_context: "",
+    hero_stats: "[]",
+    exec_summary: "{}",
+    metrics: "[]",
+    data_table: "[]",
+    rpi_analysis: "{}",
+    risk_buckets: "[]",
+    timeline: "[]",
+    guidance: "[]",
+    sources: "[]",
   });
 
   const fetchReports = async () => {
@@ -83,8 +114,24 @@ const ReportsManager = () => {
       status: "draft",
       reading_time: "",
       author: "",
+      // Rich report fields
+      is_rich_report: false,
+      subtitle: "",
+      label: "",
+      tier: "tier_1",
+      hero_context: "",
+      hero_stats: "[]",
+      exec_summary: "{}",
+      metrics: "[]",
+      data_table: "[]",
+      rpi_analysis: "{}",
+      risk_buckets: "[]",
+      timeline: "[]",
+      guidance: "[]",
+      sources: "[]",
     });
     setEditingReport(null);
+    setShowRichFields(false);
   };
 
   const openCreateModal = () => {
@@ -94,6 +141,9 @@ const ReportsManager = () => {
 
   const openEditModal = (item) => {
     setEditingReport(item);
+    const isRich =
+      item.is_rich_report || (item.hero_stats && item.hero_stats.length > 0);
+    setShowRichFields(isRich);
     setFormData({
       title: item.title || "",
       summary: item.summary || "",
@@ -105,6 +155,21 @@ const ReportsManager = () => {
       status: item.status || "draft",
       reading_time: item.reading_time?.toString() || "",
       author: item.author || "",
+      // Rich report fields
+      is_rich_report: item.is_rich_report || false,
+      subtitle: item.subtitle || "",
+      label: item.label || "",
+      tier: item.tier || "tier_1",
+      hero_context: item.hero_context || "",
+      hero_stats: JSON.stringify(item.hero_stats || [], null, 2),
+      exec_summary: JSON.stringify(item.exec_summary || {}, null, 2),
+      metrics: JSON.stringify(item.metrics || [], null, 2),
+      data_table: JSON.stringify(item.data_table || [], null, 2),
+      rpi_analysis: JSON.stringify(item.rpi_analysis || {}, null, 2),
+      risk_buckets: JSON.stringify(item.risk_buckets || [], null, 2),
+      timeline: JSON.stringify(item.timeline || [], null, 2),
+      guidance: JSON.stringify(item.guidance || [], null, 2),
+      sources: JSON.stringify(item.sources || [], null, 2),
     });
     setShowModal(true);
   };
@@ -152,15 +217,46 @@ const ReportsManager = () => {
     setSaving(true);
 
     try {
+      // Parse JSON fields safely
+      const parseJSON = (str, defaultVal) => {
+        try {
+          return JSON.parse(str);
+        } catch {
+          return defaultVal;
+        }
+      };
+
       const payload = {
-        ...formData,
+        title: formData.title,
+        summary: formData.summary,
+        content: formData.content,
+        file_url: formData.file_url,
+        pdf_url: formData.pdf_url,
+        cover_image_url: formData.cover_image_url,
         tags: formData.tags
           .split(",")
           .map((t) => t.trim())
           .filter(Boolean),
+        status: formData.status,
         reading_time: formData.reading_time
           ? parseInt(formData.reading_time)
           : null,
+        author: formData.author,
+        // Rich report fields
+        is_rich_report: formData.is_rich_report,
+        subtitle: formData.subtitle,
+        label: formData.label,
+        tier: formData.tier,
+        hero_context: formData.hero_context,
+        hero_stats: parseJSON(formData.hero_stats, []),
+        exec_summary: parseJSON(formData.exec_summary, {}),
+        metrics: parseJSON(formData.metrics, []),
+        data_table: parseJSON(formData.data_table, []),
+        rpi_analysis: parseJSON(formData.rpi_analysis, {}),
+        risk_buckets: parseJSON(formData.risk_buckets, []),
+        timeline: parseJSON(formData.timeline, []),
+        guidance: parseJSON(formData.guidance, []),
+        sources: parseJSON(formData.sources, []),
       };
 
       if (editingReport) {
@@ -210,7 +306,7 @@ const ReportsManager = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="font-playfair text-2xl sm:text-3xl mb-1 sm:mb-2">
+          <h1 className="font-playfair text-2xl sm:text-3xl mb-1 sm:mb-2 text-black">
             Reports Manager
           </h1>
           <p className="font-crimson text-sm sm:text-base text-gray-600">
@@ -398,8 +494,13 @@ const ReportsManager = () => {
                           </div>
                         )}
                         <div className="min-w-0">
-                          <div className="font-inter text-sm font-medium truncate max-w-xs lg:max-w-md">
+                          <div className="font-inter text-sm font-medium truncate max-w-xs lg:max-w-md flex items-center gap-2">
                             {item.title}
+                            {item.is_rich_report && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-crimson/10 text-crimson text-[10px] font-medium">
+                                <Sparkles size={10} /> Rich
+                              </span>
+                            )}
                           </div>
                           <div className="font-inter text-xs text-gray-500 truncate">
                             {item.tags?.slice(0, 3).join(", ")}
@@ -670,6 +771,211 @@ const ReportsManager = () => {
                   />
                 </div>
               </div>
+
+              {/* Rich Report Toggle */}
+              <div className="border border-platinum p-4 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Sparkles size={20} className="text-crimson" />
+                    <div>
+                      <h3 className="font-inter font-semibold text-sm">
+                        Rich Report Mode
+                      </h3>
+                      <p className="font-inter text-xs text-gray-500">
+                        Enable advanced report features like hero stats,
+                        timeline, and more
+                      </p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="is_rich_report"
+                      checked={formData.is_rich_report}
+                      onChange={(e) => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          is_rich_report: e.target.checked,
+                        }));
+                        setShowRichFields(e.target.checked);
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-crimson"></div>
+                  </label>
+                </div>
+
+                {showRichFields && (
+                  <button
+                    type="button"
+                    onClick={() => setShowRichFields(!showRichFields)}
+                    className="mt-3 flex items-center gap-2 text-sm text-crimson hover:text-deep-crimson"
+                  >
+                    {showRichFields ? (
+                      <ChevronUp size={16} />
+                    ) : (
+                      <ChevronDown size={16} />
+                    )}
+                    {showRichFields ? "Hide Rich Fields" : "Show Rich Fields"}
+                  </button>
+                )}
+              </div>
+
+              {/* Rich Report Fields */}
+              {showRichFields && formData.is_rich_report && (
+                <div className="space-y-6 border border-crimson/20 p-4 bg-crimson/5">
+                  <div className="flex items-center justify-between border-b border-crimson/20 pb-2">
+                    <h3 className="font-playfair text-lg">
+                      Rich Report Configuration
+                    </h3>
+                    {editingReport && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(editingReport.id);
+                          toast.success("Report ID copied!");
+                        }}
+                        className="btn btn-sm bg-gray-100 hover:bg-gray-200 text-xs"
+                      >
+                        <Copy size={12} /> Copy Report ID
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Subtitle */}
+                    <div className="md:col-span-2">
+                      <label className="form-label">Subtitle</label>
+                      <textarea
+                        name="subtitle"
+                        value={formData.subtitle}
+                        onChange={handleInputChange}
+                        className="form-textarea"
+                        rows={2}
+                        placeholder="Subtitle displayed below the title"
+                      />
+                    </div>
+
+                    {/* Label */}
+                    <div>
+                      <label className="form-label">Label</label>
+                      <input
+                        type="text"
+                        name="label"
+                        value={formData.label}
+                        onChange={handleInputChange}
+                        className="form-input"
+                        placeholder="e.g., Workforce Intelligence Briefing · January 2026"
+                      />
+                    </div>
+
+                    {/* Tier */}
+                    <div>
+                      <label className="form-label">Tier</label>
+                      <select
+                        name="tier"
+                        value={formData.tier}
+                        onChange={handleInputChange}
+                        className="form-input"
+                      >
+                        <option value="tier_1">Tier 1 - Critical Impact</option>
+                        <option value="tier_2">Tier 2 - Elevated Risk</option>
+                        <option value="tier_3">Tier 3 - Moderate</option>
+                      </select>
+                    </div>
+
+                    {/* Hero Context */}
+                    <div className="md:col-span-2">
+                      <label className="form-label">
+                        Hero Context (Why this matters)
+                      </label>
+                      <textarea
+                        name="hero_context"
+                        value={formData.hero_context}
+                        onChange={handleInputChange}
+                        className="form-textarea"
+                        rows={4}
+                        placeholder="Explanation of why this report matters to the reader"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Visual Builders for Complex Fields */}
+                  <div className="space-y-6 pt-4 border-t border-crimson/20">
+                    {/* Hero Stats Builder */}
+                    <HeroStatsBuilder
+                      value={formData.hero_stats}
+                      onChange={(val) =>
+                        setFormData((prev) => ({ ...prev, hero_stats: val }))
+                      }
+                    />
+
+                    {/* Exec Summary Builder */}
+                    <ExecSummaryBuilder
+                      value={formData.exec_summary}
+                      onChange={(val) =>
+                        setFormData((prev) => ({ ...prev, exec_summary: val }))
+                      }
+                    />
+
+                    {/* Metrics Builder */}
+                    <MetricsBuilder
+                      value={formData.metrics}
+                      onChange={(val) =>
+                        setFormData((prev) => ({ ...prev, metrics: val }))
+                      }
+                    />
+
+                    {/* Data Table Builder */}
+                    <DataTableBuilder
+                      value={formData.data_table}
+                      onChange={(val) =>
+                        setFormData((prev) => ({ ...prev, data_table: val }))
+                      }
+                    />
+
+                    {/* RPI Analysis Builder */}
+                    <RpiAnalysisBuilder
+                      value={formData.rpi_analysis}
+                      onChange={(val) =>
+                        setFormData((prev) => ({ ...prev, rpi_analysis: val }))
+                      }
+                    />
+
+                    {/* Risk Buckets Builder */}
+                    <RiskBucketsBuilder
+                      value={formData.risk_buckets}
+                      onChange={(val) =>
+                        setFormData((prev) => ({ ...prev, risk_buckets: val }))
+                      }
+                    />
+
+                    {/* Timeline Builder */}
+                    <TimelineBuilder
+                      value={formData.timeline}
+                      onChange={(val) =>
+                        setFormData((prev) => ({ ...prev, timeline: val }))
+                      }
+                    />
+
+                    {/* Guidance Builder */}
+                    <GuidanceBuilder
+                      value={formData.guidance}
+                      onChange={(val) =>
+                        setFormData((prev) => ({ ...prev, guidance: val }))
+                      }
+                    />
+
+                    {/* Sources Builder */}
+                    <SourcesBuilder
+                      value={formData.sources}
+                      onChange={(val) =>
+                        setFormData((prev) => ({ ...prev, sources: val }))
+                      }
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex justify-end gap-4 pt-4 border-t border-platinum">

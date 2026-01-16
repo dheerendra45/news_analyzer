@@ -165,7 +165,7 @@ const Dashboard = () => {
   // If we're at a nested route, show the outlet
   if (location.pathname !== "/admin") {
     return (
-      <div className="min-h-screen bg-[#f4f5f3] lg:flex">
+      <div className="min-h-screen bg-[#f4f5f3] lg:flex pt-16">
         <MobileHeader />
         <Sidebar />
 
@@ -179,7 +179,7 @@ const Dashboard = () => {
 
   // Dashboard Overview
   return (
-    <div className="min-h-screen bg-[#f4f5f3] lg:flex">
+    <div className="min-h-screen bg-[#f4f5f3] lg:flex pt-16">
       <MobileHeader />
       <Sidebar />
 
@@ -187,7 +187,7 @@ const Dashboard = () => {
       <main className="flex-1 p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
-          <h1 className="font-playfair text-2xl sm:text-3xl mb-2">
+          <h1 className="font-playfair text-2xl sm:text-3xl mb-2 text-black">
             Dashboard Overview
           </h1>
           <p className="font-crimson text-base sm:text-lg text-gray-600">

@@ -14,6 +14,7 @@ import toast from "react-hot-toast";
 
 const Reports = () => {
   const [reports, setReports] = useState([]);
+  const [featuredReport, setFeaturedReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
@@ -37,7 +38,24 @@ const Reports = () => {
       if (selectedTag) params.tag = selectedTag;
 
       const response = await reportsAPI.getAll(params);
-      setReports(response.items || []);
+      const allReports = response.items || [];
+
+      // Find the featured Goldman report (or first rich report)
+      const featured = allReports.find(
+        (r) =>
+          r.is_rich_report ||
+          r.title === "The Structural Shift" ||
+          (r.hero_stats && r.hero_stats.length > 0)
+      );
+
+      if (featured) {
+        setFeaturedReport(featured);
+        // Filter out the featured report from regular list
+        setReports(allReports.filter((r) => r.id !== featured.id));
+      } else {
+        setReports(allReports);
+      }
+
       setTotal(response.total || 0);
       setTotalPages(response.pages || 1);
 
@@ -122,42 +140,60 @@ const Reports = () => {
         </div>
       </section>
 
-      {/* Featured Goldman Sachs Report */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 pt-8">
-        <Link
-          to="/report/goldman-structural-shift"
-          className="block bg-black text-white p-8 hover:bg-charcoal transition-colors group"
-        >
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="font-inter text-[10px] font-semibold uppercase tracking-wider bg-crimson text-white px-3 py-1">
-                  Featured Report
-                </span>
-                <span className="font-inter text-xs text-mist flex items-center gap-1">
-                  <Clock size={12} />
-                  12 min read
-                </span>
+      {/* Featured Report - Dynamic from DB or fallback */}
+      {(featuredReport || !loading) && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 pt-8">
+          <Link
+            to={
+              featuredReport
+                ? `/report/${featuredReport.id}`
+                : "/report/goldman-structural-shift"
+            }
+            className="block bg-black text-white p-8 hover:bg-charcoal transition-colors group"
+          >
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="font-inter text-[10px] font-semibold uppercase tracking-wider bg-crimson text-white px-3 py-1">
+                    Featured Report
+                  </span>
+                  <span className="font-inter text-xs text-mist flex items-center gap-1">
+                    <Clock size={12} />
+                    {featuredReport?.reading_time || 12} min read
+                  </span>
+                </div>
+                <h3 className="font-playfair text-2xl lg:text-3xl mb-3 group-hover:text-crimson transition-colors">
+                  {featuredReport?.title === "The Structural Shift" ? (
+                    <>
+                      The Structural{" "}
+                      <em className="italic text-crimson">Shift</em>
+                    </>
+                  ) : (
+                    featuredReport?.title || (
+                      <>
+                        The Structural{" "}
+                        <em className="italic text-crimson">Shift</em>
+                      </>
+                    )
+                  )}
+                </h3>
+                <p className="font-crimson text-titanium text-lg leading-relaxed max-w-2xl">
+                  {featuredReport?.subtitle ||
+                    featuredReport?.summary ||
+                    "Goldman Sachs warns AI-driven layoffs will continue through 2026—not because of recession, but because automation is now the strategy. What does this mean for your career?"}
+                </p>
               </div>
-              <h3 className="font-playfair text-2xl lg:text-3xl mb-3 group-hover:text-crimson transition-colors">
-                The Structural <em className="italic text-crimson">Shift</em>
-              </h3>
-              <p className="font-crimson text-titanium text-lg leading-relaxed max-w-2xl">
-                Goldman Sachs warns AI-driven layoffs will continue through
-                2026—not because of recession, but because automation is now the
-                strategy. What does this mean for your career?
-              </p>
+              <div className="flex items-center gap-2 text-crimson font-inter text-sm font-semibold uppercase tracking-wider">
+                Read Full Report
+                <ArrowRight
+                  size={16}
+                  className="group-hover:translate-x-1 transition-transform"
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-crimson font-inter text-sm font-semibold uppercase tracking-wider">
-              Read Full Report
-              <ArrowRight
-                size={16}
-                className="group-hover:translate-x-1 transition-transform"
-              />
-            </div>
-          </div>
-        </Link>
-      </section>
+          </Link>
+        </section>
+      )}
 
       {/* Section Header */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 pt-8 pb-4">
