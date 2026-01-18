@@ -19,6 +19,24 @@ export const authAPI = {
     return response.data;
   },
 
+  // Request OTP for admin login
+  requestOTP: async (email, password) => {
+    const response = await api.post("/auth/admin/login/request-otp", {
+      email,
+      password,
+    });
+    return response.data;
+  },
+
+  // Verify OTP and complete admin login
+  verifyOTP: async (email, otp) => {
+    const response = await api.post("/auth/admin/login/verify-otp", {
+      email,
+      otp,
+    });
+    return response.data;
+  },
+
   // Get current user
   getCurrentUser: async () => {
     const response = await api.get("/auth/me");

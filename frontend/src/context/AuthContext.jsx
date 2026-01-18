@@ -36,6 +36,13 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
+  const loginWithToken = (accessToken, userData) => {
+    localStorage.setItem("token", accessToken);
+    setToken(accessToken);
+    setUser(userData);
+    return userData;
+  };
+
   const logout = () => {
     localStorage.removeItem("token");
     setToken(null);
@@ -55,6 +62,7 @@ export const AuthProvider = ({ children }) => {
     token,
     loading,
     login,
+    loginWithToken,
     logout,
     isAdmin,
     isAuthenticated,

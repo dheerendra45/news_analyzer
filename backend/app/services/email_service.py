@@ -195,5 +195,64 @@ This email was sent from Replaceable.ai Reports System
             print(f"Email send error: {str(e)}")
             raise e
 
+    @staticmethod
+    async def send_email(
+        to_email: str,
+        subject: str,
+        text_content: str,
+        html_content: Optional[str] = None
+    ) -> bool:
+        """
+        Send a generic email
+        
+        Args:
+            to_email: Recipient email address
+            subject: Email subject
+            text_content: Plain text content
+            html_content: Optional HTML content
+            
+        Returns:
+            bool: True if email sent successfully
+        """
+        
+        # Check if email is configured
+        if not settings.email_configured:
+            print(f"[DEV MODE] Email would be sent to: {to_email}")
+            print(f"[DEV MODE] Subject: {subject}")
+            return True
+        
+        try:
+            # Create message container
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = f"{settings.smtp_from_name} <{settings.smtp_from_email}>"
+            msg["To"] = to_email
+            
+            # Attach plain text
+            part1 = MIMEText(text_content, "plain")
+            msg.attach(part1)
+            
+            # Attach HTML if provided
+            if html_content:
+                part2 = MIMEText(html_content, "html")
+                msg.attach(part2)
+            
+            # Send email
+            context = ssl.create_default_context()
+            with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
+                server.starttls(context=context)
+                server.login(settings.smtp_user, settings.smtp_password)
+                server.sendmail(
+                    settings.smtp_from_email,
+                    to_email,
+                    msg.as_string()
+                )
+            
+            return True
+            
+        except Exception as e:
+            print(f"Email send error: {str(e)}")
+            raise e
+
 
 email_service = EmailService()

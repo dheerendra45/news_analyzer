@@ -76,3 +76,30 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+# OTP schemas
+class OTPRequest(BaseModel):
+    """Request to initiate OTP login"""
+    email: EmailStr
+    password: str
+
+
+class OTPRequestResponse(BaseModel):
+    """Response after OTP is sent"""
+    message: str
+    email: str
+    otp_sent: bool = True
+
+
+class OTPVerify(BaseModel):
+    """Verify OTP and complete login"""
+    email: EmailStr
+    otp: str = Field(..., min_length=6, max_length=6)
+
+
+class OTPVerifyResponse(BaseModel):
+    """Response after successful OTP verification"""
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse

@@ -7,10 +7,15 @@ from app.schemas.user import (
     AdminCreate,
     LoginRequest,
     LoginResponse,
-    UserResponse
+    UserResponse,
+    OTPRequest,
+    OTPRequestResponse,
+    OTPVerify,
+    OTPVerifyResponse
 )
 from app.services.auth_service import AuthService
 from app.services.file_upload import file_upload_service
+from app.services.otp_service import otp_service
 from app.dependencies import get_current_user, get_admin_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -99,6 +104,90 @@ async def register_admin(admin_data: AdminCreate):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+
+
+@router.post("/admin/login/request-otp", response_model=OTPRequestResponse)
+async def request_admin_otp(otp_data: OTPRequest):
+    """
+    Request OTP for admin login
+    
+    Step 1 of admin login: Validate credentials and send OTP to email
+    
+    - **email**: Admin email address (must be from @replaceable.ai or @attacked.ai domain)
+    - **password**: Admin password
+    """
+    # First authenticate the admin
+    user = await AuthService.authenticate_user(
+        otp_data.email,
+        otp_data.password
+    )
+    
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Check if user is admin
+    if user.get("role") != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is for admin users only"
+        )
+    
+    # Generate and send OTP
+    try:
+        await otp_service.create_and_send_otp(otp_data.email)
+        return OTPRequestResponse(
+            message="OTP sent successfully to your email",
+            email=otp_data.email,
+            otp_sent=True
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to send OTP: {str(e)}"
+        )
+
+
+@router.post("/admin/login/verify-otp", response_model=OTPVerifyResponse)
+async def verify_admin_otp(verify_data: OTPVerify):
+    """
+    Verify OTP and complete admin login
+    
+    Step 2 of admin login: Verify OTP and get access token
+    
+    - **email**: Admin email address
+    - **otp**: 6-digit OTP received via email
+    """
+    # Verify OTP
+    is_valid = otp_service.verify_otp(verify_data.email, verify_data.otp)
+    
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired OTP",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Get user from database
+    user = await AuthService.get_user_by_email(verify_data.email)
+    
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Generate access token
+    access_token = AuthService.create_user_token(user)
+    
+    return OTPVerifyResponse(
+        access_token=access_token,
+        token_type="bearer",
+        user=UserResponse(**user)
+    )
 
 
 @router.post("/admin/create", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
