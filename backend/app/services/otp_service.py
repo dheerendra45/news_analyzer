@@ -28,13 +28,13 @@ class OTPService:
         return ''.join(random.choices(string.digits, k=cls.OTP_LENGTH))
     
     @classmethod
-    async def create_and_send_otp(cls, email: str, user_data: dict) -> bool:
+    async def create_and_send_otp(cls, email: str, user_data: dict = None) -> bool:
         """
         Generate OTP, store it, and send via email.
         
         Args:
             email: User's email address
-            user_data: User data to store for later token generation
+            user_data: Optional user data to store for later token generation
             
         Returns:
             bool: True if OTP was sent successfully
@@ -46,12 +46,16 @@ class OTPService:
         cls._otp_store[email] = {
             "otp": otp,
             "expires_at": expires_at,
-            "user_data": user_data,
+            "user_data": user_data or {},
             "attempts": 0
         }
         
+        username = "Admin"
+        if user_data:
+            username = user_data.get("username", "Admin")
+        
         # Send OTP via email
-        success = await cls._send_otp_email(email, otp, user_data.get("username", "Admin"))
+        success = await cls._send_otp_email(email, otp, username)
         
         if not success:
             # Clean up if email failed
@@ -61,26 +65,26 @@ class OTPService:
         return True
     
     @classmethod
-    def verify_otp(cls, email: str, otp: str) -> Optional[dict]:
+    def verify_otp(cls, email: str, otp: str) -> bool:
         """
-        Verify OTP and return user data if valid.
+        Verify OTP.
         
         Args:
             email: User's email address
             otp: OTP entered by user
             
         Returns:
-            dict: User data if OTP is valid, None otherwise
+            bool: True if OTP is valid, False otherwise
         """
         stored = cls._otp_store.get(email)
         
         if not stored:
-            return None
+            return False
         
         # Check if expired
         if datetime.utcnow() > stored["expires_at"]:
             del cls._otp_store[email]
-            return None
+            return False
         
         # Increment attempts
         stored["attempts"] += 1
@@ -88,17 +92,16 @@ class OTPService:
         # Max 3 attempts
         if stored["attempts"] > 3:
             del cls._otp_store[email]
-            return None
+            return False
         
         # Verify OTP
         if stored["otp"] != otp:
-            return None
+            return False
         
-        # OTP valid - get user data and clean up
-        user_data = stored["user_data"]
+        # OTP valid - clean up
         del cls._otp_store[email]
         
-        return user_data
+        return True
     
     @classmethod
     async def _send_otp_email(cls, to_email: str, otp: str, username: str) -> bool:
