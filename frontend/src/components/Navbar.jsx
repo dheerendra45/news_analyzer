@@ -105,19 +105,19 @@ const Navbar = () => {
 
       {/* Mobile Navigation */}
       <div
-        className={`md:hidden absolute top-full left-0 right-0 bg-black/98 backdrop-blur-lg border-b border-white/5 transition-all duration-300 ${
+        className={`md:hidden fixed top-[72px] left-0 right-0 bottom-0 bg-black z-[100] transition-all duration-300 ${
           mobileMenuOpen
-            ? "opacity-100 visible translate-y-0"
-            : "opacity-0 invisible -translate-y-4"
+            ? "opacity-100 visible translate-x-0"
+            : "opacity-0 invisible -translate-x-full"
         }`}
       >
-        <nav className="flex flex-col py-4">
+        <nav className="flex flex-col py-6 px-2">
           <Link
             to="/"
             onClick={closeMobileMenu}
-            className={`font-inter text-sm font-medium px-6 py-3 transition-colors ${
+            className={`font-inter text-lg font-medium px-6 py-4 transition-colors rounded-lg ${
               isActive("/")
-                ? "text-white bg-white/5"
+                ? "text-white bg-white/10"
                 : "text-titanium hover:text-white hover:bg-white/5"
             }`}
           >
@@ -126,9 +126,9 @@ const Navbar = () => {
           <Link
             to="/archive"
             onClick={closeMobileMenu}
-            className={`font-inter text-sm font-medium px-6 py-3 transition-colors ${
+            className={`font-inter text-lg font-medium px-6 py-4 transition-colors rounded-lg ${
               isActive("/archive")
-                ? "text-white bg-white/5"
+                ? "text-white bg-white/10"
                 : "text-titanium hover:text-white hover:bg-white/5"
             }`}
           >
@@ -136,22 +136,22 @@ const Navbar = () => {
           </Link>
 
           {/* Mobile Auth Section */}
-          <div className="border-t border-white/10 mt-2 pt-2">
+          <div className="border-t border-white/10 mt-4 pt-4 mx-4">
             {isAuthenticated() ? (
               <>
                 {isAdmin() && (
                   <Link
                     to="/admin"
                     onClick={closeMobileMenu}
-                    className="flex items-center gap-2 font-inter text-sm font-medium px-6 py-3 text-crimson hover:bg-white/5 transition-colors"
+                    className="flex items-center gap-3 font-inter text-lg font-medium px-6 py-4 text-crimson hover:bg-white/5 transition-colors rounded-lg"
                   >
-                    <LayoutDashboard size={16} />
+                    <LayoutDashboard size={20} />
                     Admin Dashboard
                   </Link>
                 )}
-                <div className="flex items-center justify-between px-6 py-3">
-                  <span className="font-inter text-xs text-titanium flex items-center gap-2">
-                    <User size={14} />
+                <div className="flex items-center justify-between px-6 py-4">
+                  <span className="font-inter text-sm text-titanium flex items-center gap-2">
+                    <User size={16} />
                     {user?.username}
                   </span>
                   <button
@@ -159,9 +159,9 @@ const Navbar = () => {
                       logout();
                       closeMobileMenu();
                     }}
-                    className="flex items-center gap-2 font-inter text-xs text-mist hover:text-white transition-colors"
+                    className="flex items-center gap-2 font-inter text-sm text-mist hover:text-white transition-colors bg-white/10 px-4 py-2 rounded-lg"
                   >
-                    <LogOut size={14} />
+                    <LogOut size={16} />
                     Logout
                   </button>
                 </div>
