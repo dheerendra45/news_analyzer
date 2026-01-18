@@ -3,6 +3,7 @@ Application configuration using Pydantic Settings
 """
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -30,10 +31,23 @@ class Settings(BaseSettings):
     upload_dir: str = "uploads"
     max_file_size: int = 10485760  # 10MB
     
+    # Email Settings (SMTP)
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_user: Optional[str] = None
+    smtp_password: Optional[str] = None
+    smtp_from_email: str = "noreply@replaceable.ai"
+    smtp_from_name: str = "Replaceable.ai Reports"
+    
     @property
     def admin_domain_list(self) -> list:
         """Get list of allowed admin domains"""
         return [d.strip().lower() for d in self.admin_domains.split(",")]
+    
+    @property
+    def email_configured(self) -> bool:
+        """Check if email is properly configured"""
+        return bool(self.smtp_user and self.smtp_password)
     
     class Config:
         env_file = ".env"

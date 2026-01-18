@@ -18,6 +18,13 @@ import {
   ChevronUp,
   Sparkles,
   Copy,
+  Code,
+  FileCode,
+  Monitor,
+  Send,
+  Mail,
+  Check,
+  ExternalLink,
 } from "lucide-react";
 import {
   HeroStatsBuilder,
@@ -44,6 +51,17 @@ const ReportsManager = () => {
   const [editingReport, setEditingReport] = useState(null);
   const [saving, setSaving] = useState(false);
   const [showRichFields, setShowRichFields] = useState(false);
+
+  // Upload mode: 'manual' or 'html'
+  const [uploadMode, setUploadMode] = useState("manual");
+  const [htmlContent, setHtmlContent] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
+
+  // Send to Manager state
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [managerEmail, setManagerEmail] = useState("");
+  const [sendingPreview, setSendingPreview] = useState(false);
+  const [previewMessage, setPreviewMessage] = useState("");
 
   // Form state
   const [formData, setFormData] = useState({
@@ -132,6 +150,8 @@ const ReportsManager = () => {
     });
     setEditingReport(null);
     setShowRichFields(false);
+    setUploadMode("manual");
+    setHtmlContent("");
   };
 
   const openCreateModal = () => {
@@ -139,11 +159,56 @@ const ReportsManager = () => {
     setShowModal(true);
   };
 
+  // Handle HTML file upload
+  const handleHtmlUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.name.endsWith(".html") && !file.name.endsWith(".htm")) {
+      toast.error("Please upload an HTML file");
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      setHtmlContent(text);
+
+      // Try to extract title from HTML
+      const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i);
+      const h1Match = text.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+      const extractedTitle = titleMatch
+        ? titleMatch[1]
+        : h1Match
+          ? h1Match[1]
+          : "";
+
+      if (extractedTitle) {
+        setFormData((prev) => ({ ...prev, title: extractedTitle.trim() }));
+      }
+
+      // Set the HTML content as the report content
+      setFormData((prev) => ({ ...prev, content: text }));
+
+      toast.success("HTML file loaded successfully!");
+    } catch (err) {
+      toast.error("Failed to read HTML file");
+      console.error(err);
+    }
+  };
+
   const openEditModal = (item) => {
     setEditingReport(item);
     const isRich =
       item.is_rich_report || (item.hero_stats && item.hero_stats.length > 0);
     setShowRichFields(isRich);
+    // If report has html_content, set upload mode to html and load the content
+    if (item.html_content) {
+      setUploadMode("html");
+      setHtmlContent(item.html_content);
+    } else {
+      setUploadMode("form");
+      setHtmlContent("");
+    }
     setFormData({
       title: item.title || "",
       summary: item.summary || "",
@@ -257,6 +322,8 @@ const ReportsManager = () => {
         timeline: parseJSON(formData.timeline, []),
         guidance: parseJSON(formData.guidance, []),
         sources: parseJSON(formData.sources, []),
+        // Full HTML content for standalone HTML reports
+        html_content: uploadMode === "html" && htmlContent ? htmlContent : null,
       };
 
       if (editingReport) {
@@ -298,6 +365,197 @@ const ReportsManager = () => {
     } catch (err) {
       toast.error("Failed to update status");
       console.error(err);
+    }
+  };
+
+  // Generate full HTML document for iframe preview
+  const generatePreviewHtml = () => {
+    // If HTML content was uploaded, use it directly as it's a complete document
+    if (uploadMode === "html" && htmlContent) {
+      return htmlContent;
+    }
+
+    // Otherwise, generate a styled preview from form data
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${formData.title || "Report Preview"}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@400;500;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --crimson: #c41e3a;
+      --deep-crimson: #8b1629;
+      --black: #0f0f0f;
+      --charcoal: #2d2d2d;
+      --titanium: #c4cdbe;
+      --grey: #6f6f6f;
+      --mist: #8b8b8b;
+      --platinum: #e8e8e8;
+      --bg: #f4f5f3;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Crimson Text', Georgia, serif;
+      background: var(--bg);
+      color: var(--black);
+      line-height: 1.7;
+      font-size: 18px;
+    }
+    
+    .container { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+    
+    .cover-image {
+      width: 100%;
+      height: 300px;
+      object-fit: cover;
+      margin-bottom: 32px;
+    }
+    
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--black);
+    }
+    
+    .subtitle {
+      font-family: 'Crimson Text', serif;
+      font-size: 1.25rem;
+      color: var(--grey);
+      margin-bottom: 16px;
+    }
+    
+    .meta {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.875rem;
+      color: var(--mist);
+      margin-bottom: 32px;
+      display: flex;
+      gap: 16px;
+    }
+    
+    .summary {
+      background: white;
+      padding: 24px;
+      border-left: 4px solid var(--crimson);
+      margin-bottom: 32px;
+    }
+    
+    .summary-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--mist);
+      margin-bottom: 8px;
+    }
+    
+    .content {
+      font-size: 1.125rem;
+      line-height: 1.8;
+    }
+    
+    .content p { margin-bottom: 1.5em; }
+    
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--platinum);
+    }
+    
+    .tag {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.75rem;
+      padding: 6px 12px;
+      background: white;
+      border: 1px solid var(--platinum);
+      color: var(--charcoal);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    ${formData.cover_image_url ? `<img src="${formData.cover_image_url}" alt="Cover" class="cover-image" />` : ""}
+    <h1>${formData.title || "Untitled Report"}</h1>
+    ${formData.subtitle ? `<p class="subtitle">${formData.subtitle}</p>` : ""}
+    <div class="meta">
+      ${formData.author ? `<span>By ${formData.author}</span>` : ""}
+      ${formData.reading_time ? `<span>· ${formData.reading_time} min read</span>` : ""}
+    </div>
+    ${
+      formData.summary
+        ? `
+      <div class="summary">
+        <div class="summary-label">Summary</div>
+        <p>${formData.summary}</p>
+      </div>
+    `
+        : ""
+    }
+    <div class="content">
+      ${formData.content ? formData.content.replace(/\n/g, "<br/>") : '<p style="color: #999; text-align: center;">No content added yet</p>'}
+    </div>
+    ${
+      formData.tags
+        ? `
+      <div class="tags">
+        ${formData.tags
+          .split(",")
+          .filter((t) => t.trim())
+          .map((tag) => `<span class="tag">${tag.trim()}</span>`)
+          .join("")}
+      </div>
+    `
+        : ""
+    }
+  </div>
+</body>
+</html>`;
+  };
+
+  // Handle sending preview to manager
+  const handleSendToManager = async () => {
+    if (!managerEmail.trim()) {
+      toast.error("Please enter manager's email address");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(managerEmail)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    setSendingPreview(true);
+    try {
+      const previewData = {
+        to_email: managerEmail.trim(),
+        subject: `Report Preview: ${formData.title || "Untitled Report"}`,
+        report_title: formData.title || "Untitled Report",
+        report_summary: formData.summary || "",
+        report_author: formData.author || "Admin",
+        message: previewMessage || "",
+        html_content: generatePreviewHtml(),
+      };
+
+      await reportsAPI.sendPreview(previewData);
+      toast.success(`Preview sent to ${managerEmail}!`);
+      setShowSendModal(false);
+      setManagerEmail("");
+      setPreviewMessage("");
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to send preview");
+      console.error(err);
+    } finally {
+      setSendingPreview(false);
     }
   };
 
@@ -601,15 +859,135 @@ const ReportsManager = () => {
               <h2 className="font-playfair text-xl sm:text-2xl">
                 {editingReport ? "Edit Report" : "Create Report"}
               </h2>
-              <button onClick={closeModal} className="p-2 hover:bg-gray-100">
-                <X size={20} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(true)}
+                  className="btn btn-secondary btn-sm flex items-center gap-1"
+                  title="Preview Report"
+                >
+                  <Monitor size={16} />
+                  <span className="hidden sm:inline">Preview</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSendModal(true)}
+                  className="btn btn-sm bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1"
+                  title="Send Preview to Manager"
+                >
+                  <Send size={16} />
+                  <span className="hidden sm:inline">Send to Manager</span>
+                </button>
+                <button onClick={closeModal} className="p-2 hover:bg-gray-100">
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             <form
               onSubmit={handleSubmit}
               className="p-4 sm:p-6 space-y-4 sm:space-y-6"
             >
+              {/* Upload Mode Toggle */}
+              {!editingReport && (
+                <div className="bg-gray-50 border border-platinum p-4 rounded">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-inter font-semibold text-sm">
+                      Create Method
+                    </h3>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setUploadMode("manual")}
+                      className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 border-2 transition-all ${
+                        uploadMode === "manual"
+                          ? "border-crimson bg-crimson/5 text-crimson"
+                          : "border-platinum bg-white text-gray-600 hover:border-gray-400"
+                      }`}
+                    >
+                      <Edit2 size={18} />
+                      <span className="font-inter text-sm font-medium">
+                        Fill Manually
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUploadMode("html")}
+                      className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 border-2 transition-all ${
+                        uploadMode === "html"
+                          ? "border-crimson bg-crimson/5 text-crimson"
+                          : "border-platinum bg-white text-gray-600 hover:border-gray-400"
+                      }`}
+                    >
+                      <FileCode size={18} />
+                      <span className="font-inter text-sm font-medium">
+                        Upload HTML
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* HTML Upload Section */}
+              {uploadMode === "html" && !editingReport && (
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Code size={20} className="text-blue-600" />
+                    <div>
+                      <h3 className="font-inter font-semibold text-sm text-blue-900">
+                        Upload HTML Report
+                      </h3>
+                      <p className="font-inter text-xs text-blue-700">
+                        Upload an HTML file like goa.html to create a report
+                        directly
+                      </p>
+                    </div>
+                  </div>
+                  <label className="block">
+                    <div
+                      className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${
+                        htmlContent
+                          ? "border-green-400 bg-green-50"
+                          : "border-blue-300 hover:border-blue-500 hover:bg-blue-100/50"
+                      }`}
+                    >
+                      {htmlContent ? (
+                        <div className="space-y-2">
+                          <FileCode
+                            size={32}
+                            className="mx-auto text-green-600"
+                          />
+                          <p className="font-inter text-sm font-medium text-green-700">
+                            HTML file loaded!
+                          </p>
+                          <p className="font-inter text-xs text-green-600">
+                            {(htmlContent.length / 1024).toFixed(1)} KB • Click
+                            to replace
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Upload size={32} className="mx-auto text-blue-400" />
+                          <p className="font-inter text-sm text-blue-600">
+                            Click to upload HTML file
+                          </p>
+                          <p className="font-inter text-xs text-blue-500">
+                            or drag and drop
+                          </p>
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept=".html,.htm"
+                        onChange={handleHtmlUpload}
+                        className="hidden"
+                      />
+                    </div>
+                  </label>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 {/* Title */}
                 <div className="md:col-span-2">
@@ -1005,6 +1383,194 @@ const ReportsManager = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Preview Modal - Using iframe to preserve original HTML styles */}
+      {showPreview && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white w-full max-w-6xl h-[90vh] flex flex-col rounded-lg overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-platinum bg-gray-50">
+              <div className="flex items-center gap-3">
+                <Monitor size={20} className="text-crimson" />
+                <h3 className="font-playfair text-xl">Report Preview</h3>
+                {uploadMode === "html" && htmlContent && (
+                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-inter rounded">
+                    HTML Template
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowSendModal(true)}
+                  className="btn btn-sm bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1"
+                  title="Send to Manager"
+                >
+                  <Send size={14} />
+                  Send to Manager
+                </button>
+                <button
+                  onClick={() => {
+                    // Open preview in new tab
+                    const blob = new Blob([generatePreviewHtml()], {
+                      type: "text/html",
+                    });
+                    const url = URL.createObjectURL(blob);
+                    window.open(url, "_blank");
+                  }}
+                  className="btn btn-sm btn-secondary flex items-center gap-1"
+                  title="Open in New Tab"
+                >
+                  <ExternalLink size={14} />
+                  Open in Tab
+                </button>
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="p-2 hover:bg-gray-200 rounded transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Iframe Preview - Preserves original HTML styles */}
+            <div className="flex-1 overflow-hidden bg-gray-200 p-4">
+              <iframe
+                srcDoc={generatePreviewHtml()}
+                title="Report Preview"
+                className="w-full h-full bg-white rounded shadow-lg"
+                sandbox="allow-same-origin"
+                style={{ border: "none" }}
+              />
+            </div>
+
+            <div className="p-4 border-t border-platinum bg-gray-50 flex justify-between items-center">
+              <p className="text-sm text-gray-500 font-inter">
+                {uploadMode === "html" && htmlContent
+                  ? "Previewing uploaded HTML template with original styling"
+                  : "Previewing generated report layout"}
+              </p>
+              <button
+                onClick={() => setShowPreview(false)}
+                className="btn btn-primary"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send to Manager Modal */}
+      {showSendModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[70] p-4">
+          <div className="bg-white w-full max-w-lg rounded-lg overflow-hidden animate-fadeIn">
+            <div className="flex items-center justify-between p-4 border-b border-platinum bg-gradient-to-r from-blue-600 to-blue-700">
+              <div className="flex items-center gap-3">
+                <Mail size={20} className="text-white" />
+                <h3 className="font-playfair text-xl text-white">
+                  Send Preview to Manager
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowSendModal(false)}
+                className="p-2 hover:bg-white/20 rounded transition-colors text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Report Summary */}
+              <div className="bg-gray-50 p-4 rounded border border-platinum">
+                <p className="text-xs text-gray-500 font-inter uppercase tracking-wider mb-2">
+                  Report to Send
+                </p>
+                <p className="font-playfair text-lg font-semibold">
+                  {formData.title || "Untitled Report"}
+                </p>
+                {formData.author && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    By {formData.author}
+                  </p>
+                )}
+              </div>
+
+              {/* Manager Email */}
+              <div>
+                <label className="form-label flex items-center gap-2">
+                  <Mail size={14} className="text-gray-400" />
+                  Manager's Email Address *
+                </label>
+                <input
+                  type="email"
+                  value={managerEmail}
+                  onChange={(e) => setManagerEmail(e.target.value)}
+                  className="form-input"
+                  placeholder="manager@company.com"
+                  autoFocus
+                />
+              </div>
+
+              {/* Optional Message */}
+              <div>
+                <label className="form-label flex items-center gap-2">
+                  <FileText size={14} className="text-gray-400" />
+                  Message (Optional)
+                </label>
+                <textarea
+                  value={previewMessage}
+                  onChange={(e) => setPreviewMessage(e.target.value)}
+                  className="form-textarea"
+                  rows={3}
+                  placeholder="Add a note for your manager... (e.g., 'Please review before publishing')"
+                />
+              </div>
+
+              {/* Info */}
+              <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded">
+                <Check
+                  size={16}
+                  className="text-blue-600 mt-0.5 flex-shrink-0"
+                />
+                <div className="text-sm text-blue-800">
+                  <p className="font-medium">What will be sent:</p>
+                  <ul className="list-disc list-inside mt-1 text-xs text-blue-700">
+                    <li>Full HTML preview of the report</li>
+                    <li>Report title and summary</li>
+                    <li>Your custom message (if provided)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-platinum bg-gray-50 flex justify-end gap-3">
+              <button
+                onClick={() => setShowSendModal(false)}
+                className="btn btn-secondary"
+                disabled={sendingPreview}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendToManager}
+                disabled={sendingPreview || !managerEmail.trim()}
+                className="btn bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {sendingPreview ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send size={16} />
+                    Send Preview
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

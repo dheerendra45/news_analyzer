@@ -42,7 +42,8 @@ class ReportModel:
         timeline: Optional[List[Dict[str, Any]]] = None,
         guidance: Optional[List[Dict[str, Any]]] = None,
         sources: Optional[List[Dict[str, Any]]] = None,
-        is_rich_report: bool = False
+        is_rich_report: bool = False,
+        html_content: Optional[str] = None
     ) -> dict:
         """Create a new report document"""
         now = datetime.utcnow()
@@ -75,7 +76,8 @@ class ReportModel:
             "timeline": timeline or [],
             "guidance": guidance or [],
             "sources": sources or [],
-            "is_rich_report": is_rich_report
+            "is_rich_report": is_rich_report,
+            "html_content": html_content
         }
     
     @staticmethod
@@ -114,5 +116,6 @@ class ReportModel:
             "timeline": document.get("timeline", []),
             "guidance": document.get("guidance", []),
             "sources": document.get("sources", []),
-            "is_rich_report": document.get("is_rich_report", False)
+            "is_rich_report": document.get("is_rich_report", False),
+            "html_content": document.get("html_content")
         }

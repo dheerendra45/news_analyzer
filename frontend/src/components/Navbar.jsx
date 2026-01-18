@@ -90,14 +90,7 @@ const Navbar = () => {
                 </button>
               </div>
             </div>
-          ) : (
-            <Link
-              to="/login"
-              className="font-inter text-xs font-semibold uppercase tracking-wider bg-white/10 text-white px-4 py-2 hover:bg-white/20 transition-colors"
-            >
-              Admin Login
-            </Link>
-          )}
+          ) : null}
         </nav>
 
         {/* Mobile Menu Button */}
@@ -173,15 +166,7 @@ const Navbar = () => {
                   </button>
                 </div>
               </>
-            ) : (
-              <Link
-                to="/login"
-                onClick={closeMobileMenu}
-                className="flex items-center justify-center mx-6 my-3 font-inter text-xs font-semibold uppercase tracking-wider bg-white/10 text-white px-4 py-3 hover:bg-white/20 transition-colors"
-              >
-                Admin Login
-              </Link>
-            )}
+            ) : null}
           </div>
         </nav>
       </div>

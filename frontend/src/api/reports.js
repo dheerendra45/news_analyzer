@@ -42,6 +42,12 @@ export const reportsAPI = {
     const response = await api.get("/reports/tags/list");
     return response.data;
   },
+
+  // Send preview to manager (admin only)
+  sendPreview: async (previewData) => {
+    const response = await api.post("/reports/send-preview", previewData);
+    return response.data;
+  },
 };
 
 export default reportsAPI;

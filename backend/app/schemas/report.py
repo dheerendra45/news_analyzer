@@ -39,6 +39,7 @@ class ReportCreate(ReportBase):
     guidance: Optional[List[Dict[str, Any]]] = None
     sources: Optional[List[Dict[str, Any]]] = None
     is_rich_report: bool = False
+    html_content: Optional[str] = None  # Full HTML document for standalone HTML reports
 
 
 # Update schema
@@ -69,6 +70,7 @@ class ReportUpdate(BaseModel):
     guidance: Optional[List[Dict[str, Any]]] = None
     sources: Optional[List[Dict[str, Any]]] = None
     is_rich_report: Optional[bool] = None
+    html_content: Optional[str] = None  # Full HTML document for standalone HTML reports
 
 
 # Response schemas
@@ -103,6 +105,7 @@ class ReportResponse(BaseModel):
     guidance: Optional[List[Dict[str, Any]]] = None
     sources: Optional[List[Dict[str, Any]]] = None
     is_rich_report: bool = False
+    html_content: Optional[str] = None  # Full HTML document for standalone HTML reports
 
     class Config:
         from_attributes = True
@@ -114,3 +117,19 @@ class ReportListResponse(BaseModel):
     page: int
     size: int
     pages: int
+
+
+# Send Preview Schema
+class SendPreviewRequest(BaseModel):
+    to_email: str = Field(..., description="Manager's email address")
+    subject: str = Field(..., description="Email subject")
+    report_title: str = Field(..., description="Report title")
+    report_summary: Optional[str] = Field("", description="Report summary")
+    report_author: Optional[str] = Field("Admin", description="Report author")
+    message: Optional[str] = Field("", description="Custom message from admin")
+    html_content: str = Field(..., description="Full HTML content of the report")
+
+
+class SendPreviewResponse(BaseModel):
+    success: bool
+    message: str

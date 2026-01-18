@@ -12,9 +12,12 @@ from app.schemas.report import (
     ReportCreate,
     ReportUpdate,
     ReportResponse,
-    ReportListResponse
+    ReportListResponse,
+    SendPreviewRequest,
+    SendPreviewResponse
 )
 from app.dependencies import get_admin_user, get_optional_user
+from app.services.email_service import email_service
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
@@ -141,7 +144,23 @@ async def create_report(
         reading_time=report_data.reading_time,
         author=report_data.author,
         published_date=report_data.published_date,
-        created_by=current_user["id"]
+        created_by=current_user["id"],
+        # Rich report fields
+        subtitle=report_data.subtitle,
+        label=report_data.label,
+        tier=report_data.tier,
+        hero_stats=report_data.hero_stats,
+        hero_context=report_data.hero_context,
+        exec_summary=report_data.exec_summary,
+        metrics=report_data.metrics,
+        data_table=report_data.data_table,
+        rpi_analysis=report_data.rpi_analysis,
+        risk_buckets=report_data.risk_buckets,
+        timeline=report_data.timeline,
+        guidance=report_data.guidance,
+        sources=report_data.sources,
+        is_rich_report=report_data.is_rich_report,
+        html_content=report_data.html_content
     )
     
     result = await collection.insert_one(report_doc)
@@ -263,3 +282,56 @@ async def get_report_tags():
     collection = get_reports_collection()
     tags = await collection.distinct("tags")
     return {"tags": tags}
+
+
+@router.post("/send-preview", response_model=SendPreviewResponse)
+async def send_report_preview(
+    preview_data: SendPreviewRequest,
+    current_user: dict = Depends(get_admin_user)
+):
+    """
+    Send a report preview to a manager for approval (Admin only)
+    
+    This endpoint allows admins to send a preview of a report to a manager
+    before publishing. The manager receives an email with the full HTML
+    preview of the report.
+    """
+    try:
+        # Validate email format
+        import re
+        email_regex = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
+        if not re.match(email_regex, preview_data.to_email):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid email address format"
+            )
+        
+        # Send the preview email
+        success = await email_service.send_preview_email(
+            to_email=preview_data.to_email,
+            subject=preview_data.subject,
+            report_title=preview_data.report_title,
+            report_summary=preview_data.report_summary or "",
+            report_author=preview_data.report_author or "Admin",
+            message=preview_data.message or "",
+            html_content=preview_data.html_content
+        )
+        
+        if success:
+            return SendPreviewResponse(
+                success=True,
+                message=f"Preview sent successfully to {preview_data.to_email}"
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to send preview email"
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error sending preview: {str(e)}"
+        )

@@ -33,6 +33,9 @@ class IntelligenceCardModel:
         tier_label: str = "Tier 2 Elevated",
         status: CardStatus = CardStatus.DRAFT,
         
+        # Company Logo
+        company_logo: Optional[str] = None,
+        
         # Statistics
         stat1_value: Optional[str] = None,
         stat1_label: Optional[str] = None,
@@ -69,6 +72,7 @@ class IntelligenceCardModel:
             "company": company,
             "company_icon": company_icon,
             "company_gradient": company_gradient,
+            "company_logo": company_logo,
             "category": category,
             "excerpt": excerpt,
             "tier": tier.value if isinstance(tier, CardTier) else tier,
@@ -125,6 +129,7 @@ class IntelligenceCardModel:
             "company": document["company"],
             "company_icon": document.get("company_icon", ""),
             "company_gradient": document.get("company_gradient", ""),
+            "company_logo": document.get("company_logo"),
             "category": document["category"],
             "excerpt": document.get("excerpt", ""),
             "tier": document.get("tier", "tier_2"),

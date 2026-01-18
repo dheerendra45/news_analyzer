@@ -881,3 +881,114 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Company Logo Upload Styles */
+.logo-upload-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.logo-preview {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border: 2px solid var(--border-dark);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--charcoal);
+}
+
+.logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 8px;
+}
+
+.remove-logo-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--crimson);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.remove-logo-btn:hover {
+  background: var(--deep-crimson);
+  transform: scale(1.1);
+}
+
+.logo-upload-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 100px;
+  border: 2px dashed var(--border-dark);
+  border-radius: 12px;
+  background: var(--charcoal);
+  cursor: pointer;
+  transition: all 0.2s;
+  gap: 0.25rem;
+}
+
+.logo-upload-area:hover {
+  border-color: var(--gold);
+  background: rgba(184, 134, 11, 0.05);
+}
+
+.logo-upload-area .upload-icon {
+  color: var(--slate-text);
+}
+
+.logo-upload-area:hover .upload-icon {
+  color: var(--gold);
+}
+
+.logo-upload-area .upload-text {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--slate-text);
+}
+
+.logo-upload-area .upload-hint {
+  font-size: 0.625rem;
+  color: var(--slate-text);
+  opacity: 0.7;
+}
+
+.logo-upload-area .hidden-input {
+  display: none;
+}
+
+.logo-url-input {
+  font-size: 0.8125rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--charcoal);
+  border: 1px solid var(--border-dark);
+  border-radius: 8px;
+  color: var(--white);
+  width: 100%;
+  max-width: 300px;
+}
+
+.logo-url-input::placeholder {
+  color: var(--slate-text);
+  opacity: 0.6;
+}
+
+.logo-url-input:focus {
+  outline: none;
+  border-color: var(--gold);
+}

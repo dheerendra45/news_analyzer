@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { intelligenceCardsAPI } from "../../api/intelligenceCards";
 import { reportsAPI } from "../../api/reports";
+import { authAPI } from "../../api/auth";
+import toast from "react-hot-toast";
 import {
   Plus,
   Search,
@@ -21,6 +23,8 @@ import {
   Users,
   DollarSign,
   ArrowUpDown,
+  Upload,
+  Image,
 } from "lucide-react";
 import "../../styles/admin-cards.css";
 
@@ -73,6 +77,7 @@ const CardsManager = () => {
       company: "",
       company_icon: "",
       company_gradient: "",
+      company_logo: "",
       category: "Layoffs",
       excerpt: "",
       tier: "tier_1",
@@ -142,6 +147,7 @@ const CardsManager = () => {
       company: card.company || "",
       company_icon: card.company_icon || "",
       company_gradient: card.company_gradient || "",
+      company_logo: card.company_logo || "",
       category: card.category || "Layoffs",
       excerpt: card.excerpt || "",
       tier: card.tier || "tier_1",
@@ -218,6 +224,7 @@ const CardsManager = () => {
         company: formData.company,
         company_icon: formData.company_icon || "",
         company_gradient: formData.company_gradient || "",
+        company_logo: formData.company_logo || null,
         category: formData.category || "General",
         excerpt: formData.excerpt || "",
         tier: formData.tier || "tier_2",
@@ -259,7 +266,7 @@ const CardsManager = () => {
         err.response?.data?.detail ||
         (editingCard ? "Failed to update card" : "Failed to create card");
       setError(
-        typeof errorMsg === "string" ? errorMsg : JSON.stringify(errorMsg)
+        typeof errorMsg === "string" ? errorMsg : JSON.stringify(errorMsg),
       );
     } finally {
       setSaving(false);
@@ -446,7 +453,7 @@ const CardsManager = () => {
                         dangerouslySetInnerHTML={{
                           __html: card.title.replace(
                             card.title_highlight,
-                            `<em>${card.title_highlight}</em>`
+                            `<em>${card.title_highlight}</em>`,
                           ),
                         }}
                       ></span>
@@ -471,14 +478,14 @@ const CardsManager = () => {
                       {card.tier === "tier_1"
                         ? "Critical"
                         : card.tier === "tier_2"
-                        ? "Elevated"
-                        : "Moderate"}
+                          ? "Elevated"
+                          : "Moderate"}
                     </span>
                   </td>
                   <td>
                     <span
                       className={`status-badge ${getStatusBadgeClass(
-                        card.status
+                        card.status,
                       )}`}
                     >
                       {card.status}
@@ -636,6 +643,61 @@ const CardsManager = () => {
                   </div>
                 </div>
 
+                {/* Company Logo Upload */}
+                <div className="form-group">
+                  <label>Company Logo</label>
+                  <div className="logo-upload-container">
+                    {formData.company_logo ? (
+                      <div className="logo-preview">
+                        <img
+                          src={formData.company_logo}
+                          alt="Company logo"
+                          className="logo-image"
+                        />
+                        <button
+                          type="button"
+                          className="remove-logo-btn"
+                          onClick={() => handleFormChange("company_logo", "")}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="logo-upload-area">
+                        <Image size={24} className="upload-icon" />
+                        <span className="upload-text">Upload Logo</span>
+                        <span className="upload-hint">PNG, JPG, or SVG</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            try {
+                              const result = await authAPI.uploadImage(file);
+                              handleFormChange("company_logo", result.url);
+                              toast.success("Logo uploaded successfully");
+                            } catch (err) {
+                              toast.error("Failed to upload logo");
+                              console.error(err);
+                            }
+                          }}
+                          className="hidden-input"
+                        />
+                      </label>
+                    )}
+                    <input
+                      type="text"
+                      value={formData.company_logo}
+                      onChange={(e) =>
+                        handleFormChange("company_logo", e.target.value)
+                      }
+                      placeholder="Or paste logo URL..."
+                      className="logo-url-input"
+                    />
+                  </div>
+                </div>
+
                 <div className="form-row">
                   <div className="form-group">
                     <label>Company Gradient</label>
@@ -723,7 +785,7 @@ const CardsManager = () => {
                       onChange={(e) =>
                         handleFormChange(
                           "display_order",
-                          parseInt(e.target.value) || 0
+                          parseInt(e.target.value) || 0,
                         )
                       }
                     />
@@ -945,9 +1007,11 @@ const CardsManager = () => {
                       </optgroup>
                     </select>
                     <span className="help-text">
-                      ⭐ Rich Reports have animated stats, charts, and detailed sections.
+                      ⭐ Rich Reports have animated stats, charts, and detailed
+                      sections.
                       <br />
-                      Create a Rich Report first in Reports Manager, then link it here.
+                      Create a Rich Report first in Reports Manager, then link
+                      it here.
                     </span>
                   </div>
                 </div>
@@ -1011,8 +1075,8 @@ const CardsManager = () => {
                   {saving
                     ? "Saving..."
                     : editingCard
-                    ? "Update Card"
-                    : "Create Card"}
+                      ? "Update Card"
+                      : "Create Card"}
                 </button>
               </div>
             </form>

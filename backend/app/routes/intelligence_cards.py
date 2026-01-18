@@ -286,6 +286,7 @@ async def create_card(
         company=card_data.company,
         company_icon=card_data.company_icon,
         company_gradient=card_data.company_gradient,
+        company_logo=card_data.company_logo,
         category=card_data.category,
         excerpt=card_data.excerpt,
         tier=card_data.tier,

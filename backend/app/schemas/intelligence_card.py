@@ -18,6 +18,7 @@ class IntelligenceCardBase(BaseModel):
     company: str = Field(..., min_length=1, max_length=100)
     company_icon: str = Field(default="", max_length=10)
     company_gradient: str = Field(default="", max_length=50)
+    company_logo: Optional[str] = Field(default=None, max_length=500)
     category: str = Field(default="General", max_length=50)
     excerpt: str = Field(default="", max_length=500)
     tier: str = Field(default="tier_2")
@@ -59,6 +60,7 @@ class IntelligenceCardUpdate(BaseModel):
     company: Optional[str] = Field(default=None, min_length=1, max_length=100)
     company_icon: Optional[str] = Field(default=None, max_length=10)
     company_gradient: Optional[str] = Field(default=None, max_length=50)
+    company_logo: Optional[str] = Field(default=None, max_length=500)
     category: Optional[str] = Field(default=None, max_length=50)
     excerpt: Optional[str] = Field(default=None, max_length=500)
     tier: Optional[str] = None
@@ -98,6 +100,7 @@ class IntelligenceCardResponse(BaseModel):
     company: str
     company_icon: str
     company_gradient: str
+    company_logo: Optional[str] = None
     category: str
     excerpt: str
     tier: str

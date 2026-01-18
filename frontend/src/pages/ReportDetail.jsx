@@ -340,7 +340,7 @@ const ReportDetail = () => {
         console.error("Error fetching report:", err);
         setError(
           err.response?.data?.detail ||
-            "Failed to load report. Please try again."
+            "Failed to load report. Please try again.",
         );
       } finally {
         setLoading(false);
@@ -364,7 +364,7 @@ const ReportDetail = () => {
     };
 
     const targetValues = report.hero_stats.map((stat) =>
-      parseNumericValue(stat)
+      parseNumericValue(stat),
     );
     const duration = 2000;
     const startTime = Date.now();
@@ -484,6 +484,24 @@ const ReportDetail = () => {
           </div>
         </div>
         <Footer />
+      </div>
+    );
+  }
+
+  // =====================================================
+  // FULL HTML CONTENT - Render standalone HTML reports in iframe
+  // =====================================================
+  // If the report has html_content (uploaded HTML file), render it directly
+  if (report.html_content) {
+    return (
+      <div className="min-h-screen bg-[#f4f5f3]">
+        {/* Render the full HTML in an iframe */}
+        <iframe
+          srcDoc={report.html_content}
+          title={report.title}
+          className="w-full min-h-screen border-0"
+          style={{ height: "100vh" }}
+        />
       </div>
     );
   }
@@ -862,7 +880,7 @@ const ReportDetail = () => {
                 dangerouslySetInnerHTML={{
                   __html: report.context_title.replace(
                     /\*(.*?)\*/g,
-                    '<em class="text-crimson italic">$1</em>'
+                    '<em class="text-crimson italic">$1</em>',
                   ),
                 }}
               />
@@ -924,7 +942,7 @@ const ReportDetail = () => {
                         {stat.label}
                       </div>
                     </div>
-                  )
+                  ),
                 )}
               </div>
             </div>
@@ -1010,7 +1028,7 @@ const ReportDetail = () => {
                   dangerouslySetInnerHTML={{
                     __html: report.metrics_title.replace(
                       /\*(.*?)\*/g,
-                      '<em class="text-crimson italic">$1</em>'
+                      '<em class="text-crimson italic">$1</em>',
                     ),
                   }}
                 />
@@ -1044,8 +1062,8 @@ const ReportDetail = () => {
                       metric.changeType === "negative"
                         ? "text-crimson"
                         : metric.changeType === "positive"
-                        ? "text-teal"
-                        : "text-gold"
+                          ? "text-teal"
+                          : "text-gold"
                     }`}
                   >
                     {metric.change}
@@ -1092,7 +1110,7 @@ const ReportDetail = () => {
                           {row.quote}
                         </div>
                       </div>
-                    )
+                    ),
                   )}
                 </div>
                 {/* Desktop: Table View */}
@@ -1135,7 +1153,7 @@ const ReportDetail = () => {
                             {row.quote}
                           </td>
                         </tr>
-                      )
+                      ),
                     )}
                   </tbody>
                 </table>
@@ -1243,7 +1261,7 @@ const ReportDetail = () => {
                       <div className="h-2 bg-platinum rounded overflow-hidden mb-2">
                         <div
                           className={`h-full rounded ${getTaskBarColor(
-                            task.level
+                            task.level,
                           )}`}
                           style={{ width: `${task.aps * 100}%` }}
                         ></div>
@@ -1271,7 +1289,7 @@ const ReportDetail = () => {
                       <div className="h-2 bg-platinum rounded overflow-hidden">
                         <div
                           className={`h-full rounded ${getTaskBarColor(
-                            task.level
+                            task.level,
                           )}`}
                           style={{ width: `${task.aps * 100}%` }}
                         ></div>
@@ -1346,7 +1364,7 @@ const ReportDetail = () => {
                       <div
                         key={i}
                         className={`p-6 sm:p-8 lg:p-12 bg-white border sm:border-0 sm:border-r border-platinum last:border-r-0 ${getBucketColor(
-                          bucket.type
+                          bucket.type,
                         )} hover:-translate-y-1 hover:shadow-xl transition-all group`}
                       >
                         <div className="font-playfair text-4xl sm:text-5xl lg:text-6xl text-platinum mb-4 sm:mb-5 group-hover:text-crimson transition-colors">
@@ -1372,7 +1390,7 @@ const ReportDetail = () => {
                           ))}
                         </ul>
                       </div>
-                    )
+                    ),
                   )}
                 </div>
               </>
