@@ -6,7 +6,12 @@ import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional
+from concurrent.futures import ThreadPoolExecutor
+import asyncio
 from app.config import settings
+
+# Thread pool for running sync SMTP in async context
+_executor = ThreadPoolExecutor(max_workers=2)
 
 
 class EmailService:
@@ -221,37 +226,54 @@ This email was sent from Replaceable.ai Reports System
             print(f"[DEV MODE] Subject: {subject}")
             return True
         
+        def _send_sync():
+            """Synchronous email sending function"""
+            try:
+                print(f"[EMAIL] Attempting to send email to: {to_email}")
+                print(f"[EMAIL] SMTP Host: {settings.smtp_host}:{settings.smtp_port}")
+                print(f"[EMAIL] SMTP User: {settings.smtp_user}")
+                
+                # Create message container
+                msg = MIMEMultipart("alternative")
+                msg["Subject"] = subject
+                msg["From"] = f"{settings.smtp_from_name} <{settings.smtp_from_email}>"
+                msg["To"] = to_email
+                
+                # Attach plain text
+                part1 = MIMEText(text_content, "plain")
+                msg.attach(part1)
+                
+                # Attach HTML if provided
+                if html_content:
+                    part2 = MIMEText(html_content, "html")
+                    msg.attach(part2)
+                
+                # Send email with timeout
+                context = ssl.create_default_context()
+                with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as server:
+                    server.starttls(context=context)
+                    server.login(settings.smtp_user, settings.smtp_password)
+                    server.sendmail(
+                        settings.smtp_from_email,
+                        to_email,
+                        msg.as_string()
+                    )
+                
+                print(f"[EMAIL] Successfully sent to: {to_email}")
+                return True
+                
+            except Exception as e:
+                print(f"[EMAIL ERROR] Failed to send email: {str(e)}")
+                raise e
+        
         try:
-            # Create message container
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = subject
-            msg["From"] = f"{settings.smtp_from_name} <{settings.smtp_from_email}>"
-            msg["To"] = to_email
-            
-            # Attach plain text
-            part1 = MIMEText(text_content, "plain")
-            msg.attach(part1)
-            
-            # Attach HTML if provided
-            if html_content:
-                part2 = MIMEText(html_content, "html")
-                msg.attach(part2)
-            
-            # Send email
-            context = ssl.create_default_context()
-            with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
-                server.starttls(context=context)
-                server.login(settings.smtp_user, settings.smtp_password)
-                server.sendmail(
-                    settings.smtp_from_email,
-                    to_email,
-                    msg.as_string()
-                )
-            
-            return True
+            # Run sync SMTP in thread pool to avoid blocking
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(_executor, _send_sync)
+            return result
             
         except Exception as e:
-            print(f"Email send error: {str(e)}")
+            print(f"[EMAIL ERROR] Exception: {str(e)}")
             raise e
 
 
