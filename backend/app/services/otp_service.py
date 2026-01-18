@@ -55,7 +55,14 @@ class OTPService:
             username = user_data.get("username", "Admin")
         
         # Send OTP via email
-        success = await cls._send_otp_email(email, otp, username)
+        try:
+            success = await cls._send_otp_email(email, otp, username)
+        except Exception as e:
+            print(f"[OTP SERVICE] Email sending failed: {str(e)}")
+            # Clean up on failure
+            if email in cls._otp_store:
+                del cls._otp_store[email]
+            raise e
         
         if not success:
             # Clean up if email failed

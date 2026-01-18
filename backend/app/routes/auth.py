@@ -138,13 +138,21 @@ async def request_admin_otp(otp_data: OTPRequest):
     
     # Generate and send OTP
     try:
-        await otp_service.create_and_send_otp(otp_data.email)
+        success = await otp_service.create_and_send_otp(otp_data.email, user)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to send OTP email. Please try again."
+            )
         return OTPRequestResponse(
             message="OTP sent successfully to your email",
             email=otp_data.email,
             otp_sent=True
         )
+    except HTTPException:
+        raise
     except Exception as e:
+        print(f"[OTP ERROR] Failed to send OTP: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to send OTP: {str(e)}"
