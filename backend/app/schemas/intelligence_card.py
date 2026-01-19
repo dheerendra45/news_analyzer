@@ -18,6 +18,8 @@ class IntelligenceCardBase(BaseModel):
     company: str = Field(..., min_length=1, max_length=100)
     company_icon: str = Field(default="", max_length=10)
     company_gradient: str = Field(default="", max_length=50)
+    gradient_start: Optional[str] = Field(default=None, max_length=10)  # Hex color e.g. #1a1a2e
+    gradient_end: Optional[str] = Field(default=None, max_length=10)  # Hex color e.g. #16213e
     company_logo: Optional[str] = Field(default=None, max_length=500)
     category: str = Field(default="General", max_length=50)
     excerpt: str = Field(default="", max_length=500)
@@ -60,6 +62,8 @@ class IntelligenceCardUpdate(BaseModel):
     company: Optional[str] = Field(default=None, min_length=1, max_length=100)
     company_icon: Optional[str] = Field(default=None, max_length=10)
     company_gradient: Optional[str] = Field(default=None, max_length=50)
+    gradient_start: Optional[str] = Field(default=None, max_length=10)
+    gradient_end: Optional[str] = Field(default=None, max_length=10)
     company_logo: Optional[str] = Field(default=None, max_length=500)
     category: Optional[str] = Field(default=None, max_length=50)
     excerpt: Optional[str] = Field(default=None, max_length=500)
@@ -100,6 +104,8 @@ class IntelligenceCardResponse(BaseModel):
     company: str
     company_icon: str
     company_gradient: str
+    gradient_start: Optional[str] = None
+    gradient_end: Optional[str] = None
     company_logo: Optional[str] = None
     category: str
     excerpt: str

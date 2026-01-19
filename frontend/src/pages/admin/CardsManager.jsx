@@ -77,6 +77,8 @@ const CardsManager = () => {
       company: "",
       company_icon: "",
       company_gradient: "",
+      gradient_start: "#1a1a2e",
+      gradient_end: "#16213e",
       company_logo: "",
       category: "Layoffs",
       excerpt: "",
@@ -147,6 +149,8 @@ const CardsManager = () => {
       company: card.company || "",
       company_icon: card.company_icon || "",
       company_gradient: card.company_gradient || "",
+      gradient_start: card.gradient_start || "#1a1a2e",
+      gradient_end: card.gradient_end || "#16213e",
       company_logo: card.company_logo || "",
       category: card.category || "Layoffs",
       excerpt: card.excerpt || "",
@@ -224,6 +228,8 @@ const CardsManager = () => {
         company: formData.company,
         company_icon: formData.company_icon || "",
         company_gradient: formData.company_gradient || "",
+        gradient_start: formData.gradient_start || "#1a1a2e",
+        gradient_end: formData.gradient_end || "#16213e",
         company_logo: formData.company_logo || null,
         category: formData.category || "General",
         excerpt: formData.excerpt || "",
@@ -462,7 +468,16 @@ const CardsManager = () => {
                   </td>
                   <td>
                     <div className="company-cell">
-                      <div className={`company-icon ${card.company_gradient}`}>
+                      <div
+                        className={`company-icon ${card.company_gradient || ""}`}
+                        style={
+                          card.gradient_start && card.gradient_end
+                            ? {
+                                background: `linear-gradient(135deg, ${card.gradient_start} 0%, ${card.gradient_end} 100%)`,
+                              }
+                            : undefined
+                        }
+                      >
                         {card.company_icon}
                       </div>
                       <span>{card.company}</span>
@@ -700,15 +715,59 @@ const CardsManager = () => {
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label>Company Gradient</label>
-                    <input
-                      type="text"
-                      value={formData.company_gradient}
-                      onChange={(e) =>
-                        handleFormChange("company_gradient", e.target.value)
-                      }
-                      placeholder="e.g., goldman-gradient, amazon-gradient"
-                    />
+                    <label>Gradient Colors</label>
+                    <div className="gradient-color-picker">
+                      <div className="color-input-group">
+                        <label className="color-label">Start</label>
+                        <div className="color-input-wrapper">
+                          <input
+                            type="color"
+                            value={formData.gradient_start}
+                            onChange={(e) =>
+                              handleFormChange("gradient_start", e.target.value)
+                            }
+                            className="color-picker"
+                          />
+                          <input
+                            type="text"
+                            value={formData.gradient_start}
+                            onChange={(e) =>
+                              handleFormChange("gradient_start", e.target.value)
+                            }
+                            placeholder="#1a1a2e"
+                            className="hex-input"
+                          />
+                        </div>
+                      </div>
+                      <div className="color-input-group">
+                        <label className="color-label">End</label>
+                        <div className="color-input-wrapper">
+                          <input
+                            type="color"
+                            value={formData.gradient_end}
+                            onChange={(e) =>
+                              handleFormChange("gradient_end", e.target.value)
+                            }
+                            className="color-picker"
+                          />
+                          <input
+                            type="text"
+                            value={formData.gradient_end}
+                            onChange={(e) =>
+                              handleFormChange("gradient_end", e.target.value)
+                            }
+                            placeholder="#16213e"
+                            className="hex-input"
+                          />
+                        </div>
+                      </div>
+                      <div
+                        className="gradient-preview"
+                        style={{
+                          background: `linear-gradient(135deg, ${formData.gradient_start} 0%, ${formData.gradient_end} 100%)`,
+                        }}
+                      ></div>
+                    </div>
                   </div>
                   <div className="form-group">
                     <label>Category *</label>

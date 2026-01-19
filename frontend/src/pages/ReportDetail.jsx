@@ -492,17 +492,15 @@ const ReportDetail = () => {
   // FULL HTML CONTENT - Render standalone HTML reports in iframe
   // =====================================================
   // If the report has html_content (uploaded HTML file), render it directly
+  // The HTML file should be a complete standalone page with its own header/footer
   if (report.html_content) {
     return (
-      <div className="min-h-screen bg-[#f4f5f3]">
-        {/* Render the full HTML in an iframe */}
-        <iframe
-          srcDoc={report.html_content}
-          title={report.title}
-          className="w-full min-h-screen border-0"
-          style={{ height: "100vh" }}
-        />
-      </div>
+      <iframe
+        srcDoc={report.html_content}
+        title={report.title}
+        className="w-full h-screen border-0"
+        style={{ display: "block", margin: 0, padding: 0 }}
+      />
     );
   }
 

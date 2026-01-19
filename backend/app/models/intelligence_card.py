@@ -27,11 +27,13 @@ class IntelligenceCardModel:
         company: str,
         company_icon: str,  # Single letter or emoji for company icon
         company_gradient: str,  # CSS class for background gradient (e.g., "amazon", "meta")
-        category: str,
-        excerpt: str,
+        category: str = "General",
+        excerpt: str = "",
         tier: CardTier = CardTier.TIER_2,
         tier_label: str = "Tier 2 Elevated",
         status: CardStatus = CardStatus.DRAFT,
+        gradient_start: Optional[str] = None,  # Hex color code for gradient start (e.g., "#1a1a2e")
+        gradient_end: Optional[str] = None,  # Hex color code for gradient end (e.g., "#16213e")
         
         # Company Logo
         company_logo: Optional[str] = None,
@@ -72,6 +74,8 @@ class IntelligenceCardModel:
             "company": company,
             "company_icon": company_icon,
             "company_gradient": company_gradient,
+            "gradient_start": gradient_start,
+            "gradient_end": gradient_end,
             "company_logo": company_logo,
             "category": category,
             "excerpt": excerpt,
@@ -129,6 +133,8 @@ class IntelligenceCardModel:
             "company": document["company"],
             "company_icon": document.get("company_icon", ""),
             "company_gradient": document.get("company_gradient", ""),
+            "gradient_start": document.get("gradient_start"),
+            "gradient_end": document.get("gradient_end"),
             "company_logo": document.get("company_logo"),
             "category": document["category"],
             "excerpt": document.get("excerpt", ""),

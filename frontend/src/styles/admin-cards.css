@@ -992,3 +992,87 @@
   outline: none;
   border-color: var(--gold);
 }
+
+/* Gradient Color Picker Styles */
+.gradient-color-picker {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.color-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.color-label {
+  font-size: 0.6875rem;
+  color: var(--slate-text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.color-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--charcoal);
+  border: 1px solid var(--border-dark);
+  border-radius: 8px;
+  padding: 0.25rem 0.5rem;
+}
+
+.color-picker {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+}
+
+.color-picker::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.color-picker::-webkit-color-swatch {
+  border: 2px solid var(--border-dark);
+  border-radius: 6px;
+}
+
+.color-picker::-moz-color-swatch {
+  border: 2px solid var(--border-dark);
+  border-radius: 6px;
+}
+
+.hex-input {
+  width: 80px;
+  font-size: 0.75rem;
+  font-family: monospace;
+  padding: 0.375rem 0.5rem;
+  background: transparent;
+  border: none;
+  color: var(--white);
+  text-transform: uppercase;
+}
+
+.hex-input::placeholder {
+  color: var(--slate-text);
+  opacity: 0.6;
+}
+
+.hex-input:focus {
+  outline: none;
+}
+
+.gradient-preview {
+  width: 60px;
+  height: 40px;
+  border-radius: 8px;
+  border: 2px solid var(--border-dark);
+  flex-shrink: 0;
+}

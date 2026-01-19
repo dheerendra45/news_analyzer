@@ -188,7 +188,7 @@ const Archive = () => {
         disabled={page === 1}
       >
         ← Previous
-      </button>
+      </button>,
     );
 
     // Page numbers
@@ -196,13 +196,13 @@ const Archive = () => {
       buttons.push(
         <button key={1} className="pagination-btn" onClick={() => setPage(1)}>
           1
-        </button>
+        </button>,
       );
       if (startPage > 2) {
         buttons.push(
           <span key="ellipsis1" className="pagination-ellipsis">
             ...
-          </span>
+          </span>,
         );
       }
     }
@@ -215,7 +215,7 @@ const Archive = () => {
           onClick={() => setPage(i)}
         >
           {i}
-        </button>
+        </button>,
       );
     }
 
@@ -224,7 +224,7 @@ const Archive = () => {
         buttons.push(
           <span key="ellipsis2" className="pagination-ellipsis">
             ...
-          </span>
+          </span>,
         );
       }
       buttons.push(
@@ -234,7 +234,7 @@ const Archive = () => {
           onClick={() => setPage(totalPages)}
         >
           {totalPages}
-        </button>
+        </button>,
       );
     }
 
@@ -247,7 +247,7 @@ const Archive = () => {
         disabled={page === totalPages}
       >
         Next →
-      </button>
+      </button>,
     );
 
     return buttons;
@@ -309,7 +309,7 @@ const Archive = () => {
                 dangerouslySetInnerHTML={{
                   __html: featuredCard.title.replace(
                     featuredCard.title_highlight,
-                    `<em>${featuredCard.title_highlight}</em>`
+                    `<em>${featuredCard.title_highlight}</em>`,
                   ),
                 }}
               ></h2>
@@ -523,23 +523,40 @@ const Archive = () => {
                     onClick={() => handleCardClick(card)}
                   >
                     <div
-                      className={`analysis-card-image ${card.company_gradient}`}
+                      className={`analysis-card-image ${card.company_gradient || ""}`}
+                      style={
+                        card.gradient_start && card.gradient_end
+                          ? {
+                              background: `linear-gradient(135deg, ${card.gradient_start} 0%, ${card.gradient_end} 100%)`,
+                            }
+                          : undefined
+                      }
                     >
                       <div className="analysis-card-image-overlay"></div>
                       <div className="analysis-card-company">
-                        <div className="company-icon">{card.company_icon}</div>
+                        <div className="company-icon">
+                          {card.company_logo ? (
+                            <img
+                              src={card.company_logo}
+                              alt={card.company}
+                              className="company-logo-img"
+                            />
+                          ) : (
+                            card.company_icon
+                          )}
+                        </div>
                         <span className="company-name">{card.company}</span>
                       </div>
                       <span
                         className={`analysis-card-tier ${getTierClass(
-                          card.tier
+                          card.tier,
                         )}`}
                       >
                         {card.tier === "tier_1"
                           ? "Tier 1"
                           : card.tier === "tier_2"
-                          ? "Tier 2"
-                          : "Tier 3"}
+                            ? "Tier 2"
+                            : "Tier 3"}
                       </span>
                     </div>
                     <div className="analysis-card-content">
@@ -551,7 +568,7 @@ const Archive = () => {
                               month: "short",
                               day: "numeric",
                               year: "numeric",
-                            }
+                            },
                           )}
                         </span>
                         <span className="analysis-card-category">
@@ -562,7 +579,7 @@ const Archive = () => {
                         dangerouslySetInnerHTML={{
                           __html: card.title.replace(
                             card.title_highlight,
-                            `<em>${card.title_highlight}</em>`
+                            `<em>${card.title_highlight}</em>`,
                           ),
                         }}
                       ></h3>
@@ -582,7 +599,7 @@ const Archive = () => {
                           <div className="analysis-card-stat">
                             <div
                               className={`analysis-card-stat-value ${getStatValueClass(
-                                card.stat2.type
+                                card.stat2.type,
                               )}`}
                             >
                               {card.stat2.value}
@@ -614,9 +631,24 @@ const Archive = () => {
                   >
                     <div className="list-item-company">
                       <div
-                        className={`list-item-company-icon ${card.company_gradient}`}
+                        className={`list-item-company-icon ${card.company_gradient || ""}`}
+                        style={
+                          card.gradient_start && card.gradient_end
+                            ? {
+                                background: `linear-gradient(135deg, ${card.gradient_start} 0%, ${card.gradient_end} 100%)`,
+                              }
+                            : undefined
+                        }
                       >
-                        {card.company_icon}
+                        {card.company_logo ? (
+                          <img
+                            src={card.company_logo}
+                            alt={card.company}
+                            className="company-logo-img"
+                          />
+                        ) : (
+                          card.company_icon
+                        )}
                       </div>
                       <span className="list-item-company-name">
                         {card.company}
@@ -626,14 +658,14 @@ const Archive = () => {
                       <div className="list-item-meta">
                         <span
                           className={`list-item-tier ${getTierClass(
-                            card.tier
+                            card.tier,
                           )}`}
                         >
                           {card.tier === "tier_1"
                             ? "Tier 1"
                             : card.tier === "tier_2"
-                            ? "Tier 2"
-                            : "Tier 3"}
+                              ? "Tier 2"
+                              : "Tier 3"}
                         </span>
                         <span className="list-item-date">
                           {new Date(card.published_date).toLocaleDateString(
@@ -642,7 +674,7 @@ const Archive = () => {
                               month: "long",
                               day: "numeric",
                               year: "numeric",
-                            }
+                            },
                           )}
                         </span>
                         <span className="list-item-category">
@@ -654,7 +686,7 @@ const Archive = () => {
                         dangerouslySetInnerHTML={{
                           __html: card.title.replace(
                             card.title_highlight,
-                            `<em>${card.title_highlight}</em>`
+                            `<em>${card.title_highlight}</em>`,
                           ),
                         }}
                       ></h3>
@@ -687,7 +719,7 @@ const Archive = () => {
                         <>
                           <div
                             className={`list-item-rpi-score ${getStatValueClass(
-                              card.stat2?.type
+                              card.stat2?.type,
                             )}`}
                           >
                             {card.rpi_score}

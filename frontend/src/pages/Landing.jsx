@@ -327,10 +327,29 @@ const Landing = () => {
                   className="news-card"
                   onClick={() => handleCardClick(card)}
                 >
-                  <div className={`news-card-image ${card.company_gradient}`}>
+                  <div
+                    className={`news-card-image ${card.company_gradient || ""}`}
+                    style={
+                      card.gradient_start && card.gradient_end
+                        ? {
+                            background: `linear-gradient(135deg, ${card.gradient_start} 0%, ${card.gradient_end} 100%)`,
+                          }
+                        : undefined
+                    }
+                  >
                     <div className="news-card-image-overlay"></div>
                     <div className="news-card-company">
-                      <div className="company-icon">{card.company_icon}</div>
+                      <div className="company-icon">
+                        {card.company_logo ? (
+                          <img
+                            src={card.company_logo}
+                            alt={card.company}
+                            className="company-logo-img"
+                          />
+                        ) : (
+                          card.company_icon
+                        )}
+                      </div>
                       <span className="company-name">{card.company}</span>
                     </div>
                     <span
@@ -348,7 +367,7 @@ const Landing = () => {
                             year: "numeric",
                             month: "long",
                             day: "numeric",
-                          }
+                          },
                         )}
                       </span>
                       <span className="news-card-category">
@@ -359,7 +378,7 @@ const Landing = () => {
                       dangerouslySetInnerHTML={{
                         __html: card.title.replace(
                           card.title_highlight,
-                          `<em>${card.title_highlight}</em>`
+                          `<em>${card.title_highlight}</em>`,
                         ),
                       }}
                     ></h3>
@@ -379,7 +398,7 @@ const Landing = () => {
                         <div className="news-card-stat">
                           <div
                             className={`news-card-stat-value ${getStatValueClass(
-                              card.stat2.type
+                              card.stat2.type,
                             )}`}
                           >
                             {card.stat2.value}
@@ -449,15 +468,15 @@ const Landing = () => {
                     {company === "McKinsey"
                       ? "Strategy Team"
                       : company === "Deloitte"
-                      ? "Human Capital"
-                      : company === "BCG"
-                      ? "Future of Work"
-                      : company === "KPMG"
-                      ? "Advisory"
-                      : "Talent & Org"}
+                        ? "Human Capital"
+                        : company === "BCG"
+                          ? "Future of Work"
+                          : company === "KPMG"
+                            ? "Advisory"
+                            : "Talent & Org"}
                   </span>
                 </div>
-              )
+              ),
             )}
           </div>
 
@@ -762,7 +781,7 @@ const RPIComponents = () => {
           animateValues();
         }
       },
-      { threshold: 0.5 }
+      { threshold: 0.5 },
     );
 
     if (containerRef.current) {
