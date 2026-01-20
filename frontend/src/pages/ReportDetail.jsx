@@ -1,5 +1,5 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   ArrowLeft,
   Clock,
@@ -310,6 +310,7 @@ const ReportDetail = () => {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const iframeRef = useRef(null);
   const [animatedStats, setAnimatedStats] = useState([0, 0, 0]);
   const [gaugeValue, setGaugeValue] = useState(0);
 
@@ -550,6 +551,72 @@ const ReportDetail = () => {
   // =====================================================
   // If the report has html_content (uploaded HTML file), render it with wrapper
   if (report.html_content) {
+    console.log("HTML Content detected, length:", report.html_content.length);
+
+    // Check if it's a full HTML document (has <html>, <head>, <body> tags)
+    const isFullDocument =
+      report.html_content.includes("<html") ||
+      report.html_content.includes("<HTML") ||
+      report.html_content.includes("<!DOCTYPE");
+
+    console.log("Is full document:", isFullDocument);
+
+    // If it's a full HTML document, use iframe
+    if (isFullDocument) {
+      return (
+        <div
+          className="min-h-screen flex flex-col"
+          style={{ background: "#0f172a" }}
+        >
+          {/* Sticky Header */}
+          <header className="bg-black/95 backdrop-blur-lg py-4 sticky top-0 z-50 border-b border-white/5">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 flex justify-between items-center">
+              <Link
+                to="/"
+                className="font-playfair text-xl sm:text-2xl text-white hover:text-crimson transition-colors no-underline"
+              >
+                Replace<span className="text-crimson">able</span>.ai
+              </Link>
+              <nav className="flex items-center gap-6">
+                <Link
+                  to="/"
+                  className="font-inter text-sm text-titanium hover:text-white transition-colors no-underline"
+                >
+                  Intelligence
+                </Link>
+                <Link
+                  to="/archive"
+                  className="font-inter text-sm text-titanium hover:text-white transition-colors no-underline"
+                >
+                  Archive
+                </Link>
+                <button
+                  onClick={() => navigate(-1)}
+                  className="flex items-center gap-2 font-inter text-sm text-titanium hover:text-white transition-colors border-0 bg-transparent cursor-pointer"
+                >
+                  <ArrowLeft size={16} />
+                  Back
+                </button>
+              </nav>
+            </div>
+          </header>
+
+          {/* HTML Content in iframe - Full Document Rendering */}
+          <iframe
+            srcDoc={report.html_content}
+            title={report.title}
+            className="w-full border-0 flex-1"
+            style={{
+              minHeight: "calc(100vh - 200px)",
+              display: "block",
+            }}
+            sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+          />
+        </div>
+      );
+    }
+
+    // Otherwise, render HTML fragment directly
     return (
       <div className="min-h-screen bg-black">
         {/* Sticky Header */}
@@ -557,26 +624,26 @@ const ReportDetail = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 flex justify-between items-center">
             <Link
               to="/"
-              className="font-playfair text-xl sm:text-2xl text-white hover:text-crimson transition-colors"
+              className="font-playfair text-xl sm:text-2xl text-white hover:text-crimson transition-colors no-underline"
             >
               Replace<span className="text-crimson">able</span>.ai
             </Link>
             <nav className="flex items-center gap-6">
               <Link
                 to="/"
-                className="font-inter text-sm text-titanium hover:text-white transition-colors"
+                className="font-inter text-sm text-titanium hover:text-white transition-colors no-underline"
               >
                 Intelligence
               </Link>
               <Link
                 to="/archive"
-                className="font-inter text-sm text-titanium hover:text-white transition-colors"
+                className="font-inter text-sm text-titanium hover:text-white transition-colors no-underline"
               >
                 Archive
               </Link>
               <button
                 onClick={() => navigate(-1)}
-                className="flex items-center gap-2 font-inter text-sm text-titanium hover:text-white transition-colors"
+                className="flex items-center gap-2 font-inter text-sm text-titanium hover:text-white transition-colors border-0 bg-transparent cursor-pointer"
               >
                 <ArrowLeft size={16} />
                 Back
@@ -585,58 +652,17 @@ const ReportDetail = () => {
           </div>
         </header>
 
-        {/* HTML Content */}
+        {/* HTML Content - Full Width, No Restrictions */}
         <div
-          className="report-html-content"
+          className="report-html-content w-full"
           dangerouslySetInnerHTML={{ __html: report.html_content }}
+          style={{
+            minHeight: "60vh",
+            color: "inherit",
+            fontSize: "inherit",
+            fontFamily: "inherit",
+          }}
         />
-
-        {/* Footer (Non-Sticky) */}
-        <footer className="bg-black border-t border-white/5 py-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-              <div>
-                <Link
-                  to="/"
-                  className="font-playfair text-xl text-white hover:text-crimson transition-colors"
-                >
-                  Replace<span className="text-crimson">able</span>.ai
-                </Link>
-                <p className="font-inter text-sm text-mist mt-3">
-                  Workforce intelligence powered by AI analysis
-                </p>
-              </div>
-              <div>
-                <h5 className="font-inter text-[10px] font-semibold uppercase tracking-widest text-mist mb-4">
-                  Intelligence
-                </h5>
-                <ul className="space-y-2">
-                  <li>
-                    <Link
-                      to="/"
-                      className="font-inter text-sm text-titanium hover:text-crimson transition-colors"
-                    >
-                      Latest Analysis
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/archive"
-                      className="font-inter text-sm text-titanium hover:text-crimson transition-colors"
-                    >
-                      Archive
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-6 border-t border-white/5">
-              <p className="font-inter text-xs text-gray-500">
-                © 2026 Replaceable.ai · All rights reserved
-              </p>
-            </div>
-          </div>
-        </footer>
       </div>
     );
   }

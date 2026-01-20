@@ -240,69 +240,22 @@ img {
 
 /* Report HTML Content Styling */
 .report-html-content {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 40px 20px;
-  background: var(--black);
-  color: var(--titanium);
+  width: 100%;
+  background: transparent;
+  min-height: 60vh;
 }
 
-.report-html-content h1,
-.report-html-content h2,
-.report-html-content h3,
-.report-html-content h4 {
-  color: white;
-  font-family: 'Playfair Display', serif;
-  margin-top: 2rem;
-  margin-bottom: 1rem;
+/* Only apply minimal styling to preserve uploaded HTML appearance */
+.report-html-content > * {
+  color: inherit;
 }
 
-.report-html-content p {
-  margin-bottom: 1rem;
-  line-height: 1.7;
-}
-
+/* Ensure links in HTML content are visible */
 .report-html-content a {
-  color: var(--crimson);
-  text-decoration: none;
+  color: #c41e3a;
 }
 
 .report-html-content a:hover {
-  text-decoration: underline;
-}
-
-.report-html-content table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 2rem 0;
-}
-
-.report-html-content table th,
-.report-html-content table td {
-  padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  text-align: left;
-}
-
-.report-html-content table th {
-  background: rgba(255, 255, 255, 0.05);
-  color: white;
-  font-weight: 600;
-}
-
-.report-html-content img {
-  max-width: 100%;
-  height: auto;
-  margin: 2rem 0;
-}
-
-.report-html-content ul,
-.report-html-content ol {
-  margin-left: 2rem;
-  margin-bottom: 1rem;
-}
-
-.report-html-content li {
-  margin-bottom: 0.5rem;
+  opacity: 0.8;
 }
 
