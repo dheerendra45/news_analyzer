@@ -1072,26 +1072,62 @@ const ReportDetail = () => {
           )}
 
           {/* Executive Summary Card */}
-          {(report.exec_summary || report.execSummary) && (
-            <div className="grid lg:grid-cols-3 gap-0 bg-white border border-platinum mb-10 sm:mb-16">
-              <div className="lg:col-span-2 p-6 sm:p-8 lg:p-12 lg:border-r border-platinum">
-                <div className="font-inter text-[10px] font-semibold uppercase tracking-widest text-crimson mb-4 sm:mb-5">
-                  Executive Summary
+          {(() => {
+            const execData = report.exec_summary || report.execSummary;
+            if (!execData) return null;
+
+            // Check if there's actual content to display
+            const paragraphs = execData?.paragraphs || [];
+            const stats = execData?.stats || [];
+            const hasText =
+              typeof execData === "string" || execData.text || execData.content;
+            const hasContent = paragraphs.length > 0 || hasText;
+
+            // Don't render if there's no content
+            if (!hasContent) return null;
+
+            return (
+              <div className="grid lg:grid-cols-3 gap-0 bg-white border border-platinum mb-10 sm:mb-16">
+                <div className="lg:col-span-2 p-6 sm:p-8 lg:p-12 lg:border-r border-platinum">
+                  <div className="font-inter text-[10px] font-semibold uppercase tracking-widest text-crimson mb-4 sm:mb-5">
+                    Executive Summary
+                  </div>
+                  {(() => {
+                    // If paragraphs exist, render them
+                    if (paragraphs.length > 0) {
+                      return paragraphs.map((p, i) => (
+                        <p
+                          key={i}
+                          className="font-crimson text-base sm:text-lg text-charcoal leading-relaxed mb-4 sm:mb-5 last:mb-0"
+                        >
+                          {p}
+                        </p>
+                      ));
+                    }
+
+                    // If it's a string, render it directly
+                    if (typeof execData === "string") {
+                      return (
+                        <p className="font-crimson text-base sm:text-lg text-charcoal leading-relaxed mb-4 sm:mb-5">
+                          {execData}
+                        </p>
+                      );
+                    }
+
+                    // If it has text/content field
+                    if (execData.text || execData.content) {
+                      return (
+                        <p className="font-crimson text-base sm:text-lg text-charcoal leading-relaxed mb-4 sm:mb-5">
+                          {execData.text || execData.content}
+                        </p>
+                      );
+                    }
+
+                    return null;
+                  })()}
                 </div>
-                {(
-                  (report.exec_summary || report.execSummary)?.paragraphs || []
-                ).map((p, i) => (
-                  <p
-                    key={i}
-                    className="font-crimson text-base sm:text-lg text-charcoal leading-relaxed mb-4 sm:mb-5 last:mb-0"
-                  >
-                    {p}
-                  </p>
-                ))}
-              </div>
-              <div className="p-6 sm:p-8 lg:p-12 flex flex-row lg:flex-col justify-around lg:justify-center border-t lg:border-t-0 border-platinum">
-                {((report.exec_summary || report.execSummary)?.stats || []).map(
-                  (stat, i) => (
+                <div className="p-6 sm:p-8 lg:p-12 flex flex-row lg:flex-col justify-around lg:justify-center border-t lg:border-t-0 border-platinum">
+                  {stats.map((stat, i) => (
                     <div
                       key={i}
                       className="mb-0 lg:mb-8 last:mb-0 text-center lg:text-left"
@@ -1103,11 +1139,11 @@ const ReportDetail = () => {
                         {stat.label}
                       </div>
                     </div>
-                  ),
-                )}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Methodology Panel - Only show if we have RPI analysis */}
           {(report.rpi_analysis || report.rpiAnalysis) && (
