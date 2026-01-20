@@ -13,6 +13,7 @@ from app.database import connect_to_mongo, close_mongo_connection
 from app.services.auth_service import AuthService
 from app.routes import auth_router, news_router, reports_router
 from app.routes.intelligence_cards import router as intelligence_cards_router
+from app.routes.subscriptions import router as subscriptions_router
 
 
 @asynccontextmanager
@@ -83,6 +84,7 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(news_router, prefix="/api")
 app.include_router(reports_router, prefix="/api")
 app.include_router(intelligence_cards_router, prefix="/api")
+app.include_router(subscriptions_router, prefix="/api")
 
 
 @app.get("/", tags=["Root"])

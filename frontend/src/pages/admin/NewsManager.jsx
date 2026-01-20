@@ -27,6 +27,8 @@ const NewsManager = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingNews, setEditingNews] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [uploadMode, setUploadMode] = useState("form"); // "form" or "paste"
+  const [pasteContent, setPasteContent] = useState("");
 
   // Form state
   const [formData, setFormData] = useState({
@@ -96,6 +98,59 @@ const NewsManager = () => {
       secondary_stat_label: "",
     });
     setEditingNews(null);
+    setUploadMode("form");
+    setPasteContent("");
+  };
+
+  const handlePasteContent = () => {
+    if (!pasteContent.trim()) {
+      toast.error("Please paste some content first");
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(pasteContent);
+
+      setFormData({
+        title: parsed.headline || parsed.title || "",
+        description: parsed.summary || parsed.description || "",
+        summary: parsed.summary || "",
+        source: parsed.source || "",
+        source_url: parsed.url || parsed.source_url || "",
+        image_url: parsed.image_url || "",
+        category: parsed.category || "General",
+        tier:
+          parsed.tier === 1
+            ? "tier_1"
+            : parsed.tier === 2
+              ? "tier_2"
+              : parsed.tier === 3
+                ? "tier_3"
+                : "tier_2",
+        status: parsed.status || "draft",
+        tags: Array.isArray(parsed.tags)
+          ? parsed.tags.join(", ")
+          : parsed.tags || "",
+        affected_roles: Array.isArray(parsed.affected_roles)
+          ? parsed.affected_roles.join(", ")
+          : parsed.affected_roles || "",
+        companies: Array.isArray(parsed.companies)
+          ? parsed.companies.join(", ")
+          : parsed.companies || "",
+        key_stat_value: parsed.key_stat?.value || "",
+        key_stat_label: parsed.key_stat?.label || "",
+        secondary_stat_value: parsed.secondary_stat?.value || "",
+        secondary_stat_label: parsed.secondary_stat?.label || "",
+      });
+
+      toast.success("News content parsed and loaded successfully!");
+      setPasteContent("");
+    } catch (err) {
+      toast.error(
+        "Invalid JSON format. Please check your content and try again.",
+      );
+      console.error("Parse error:", err);
+    }
   };
 
   const openCreateModal = () => {
@@ -341,8 +396,8 @@ const NewsManager = () => {
                           item.tier === "tier_1"
                             ? "bg-crimson"
                             : item.tier === "tier_2"
-                            ? "bg-gold"
-                            : "bg-teal"
+                              ? "bg-gold"
+                              : "bg-teal"
                         }`}
                       ></span>
                       <span>{getTierLabel(item.tier)}</span>
@@ -426,8 +481,8 @@ const NewsManager = () => {
                           item.tier === "tier_1"
                             ? "bg-crimson"
                             : item.tier === "tier_2"
-                            ? "bg-gold"
-                            : "bg-teal"
+                              ? "bg-gold"
+                              : "bg-teal"
                         }`}
                       ></span>
                       <span className="font-inter text-xs">
@@ -531,233 +586,305 @@ const NewsManager = () => {
               onSubmit={handleSubmit}
               className="p-4 sm:p-6 space-y-4 sm:space-y-6"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Title */}
-                <div className="md:col-span-2">
-                  <label className="form-label">Title *</label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    required
-                    className="form-input"
-                    placeholder="News headline"
-                  />
-                </div>
-
-                {/* Source */}
-                <div>
-                  <label className="form-label">Source</label>
-                  <input
-                    type="text"
-                    name="source"
-                    value={formData.source}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    placeholder="e.g., Reuters"
-                  />
-                </div>
-
-                {/* Source URL */}
-                <div>
-                  <label className="form-label">Source URL</label>
-                  <input
-                    type="url"
-                    name="source_url"
-                    value={formData.source_url}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    placeholder="https://..."
-                  />
-                </div>
-
-                {/* Summary */}
-                <div className="md:col-span-2">
-                  <label className="form-label">Summary</label>
-                  <textarea
-                    name="summary"
-                    value={formData.summary}
-                    onChange={handleInputChange}
-                    className="form-textarea"
-                    rows={3}
-                    placeholder="Brief summary of the news"
-                  />
-                </div>
-
-                {/* Description */}
-                <div className="md:col-span-2">
-                  <label className="form-label">Description *</label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    required
-                    className="form-textarea"
-                    rows={5}
-                    placeholder="Full description"
-                  />
-                </div>
-
-                {/* Category */}
-                <div>
-                  <label className="form-label">Category</label>
-                  <input
-                    type="text"
-                    name="category"
-                    value={formData.category}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    placeholder="e.g., Technology"
-                  />
-                </div>
-
-                {/* Tier */}
-                <div>
-                  <label className="form-label">Tier</label>
-                  <select
-                    name="tier"
-                    value={formData.tier}
-                    onChange={handleInputChange}
-                    className="form-input"
+              {/* Upload Mode Toggle */}
+              {!editingNews && (
+                <div className="flex gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUploadMode("form");
+                      setPasteContent("");
+                    }}
+                    className={`flex-1 py-2 px-4 rounded font-inter text-sm font-medium transition-colors ${
+                      uploadMode === "form"
+                        ? "bg-crimson text-white"
+                        : "bg-white text-gray-700 hover:bg-gray-100"
+                    }`}
                   >
-                    <option value="tier_1">Tier 1 - Major (Crimson)</option>
-                    <option value="tier_2">Tier 2 - Medium (Gold)</option>
-                    <option value="tier_3">Tier 3 - Minor (Teal)</option>
-                  </select>
-                </div>
-
-                {/* Status */}
-                <div>
-                  <label className="form-label">Status</label>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleInputChange}
-                    className="form-input"
+                    Fill Manually
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUploadMode("paste")}
+                    className={`flex-1 py-2 px-4 rounded font-inter text-sm font-medium transition-colors ${
+                      uploadMode === "paste"
+                        ? "bg-crimson text-white"
+                        : "bg-white text-gray-700 hover:bg-gray-100"
+                    }`}
                   >
-                    <option value="draft">Draft</option>
-                    <option value="published">Published</option>
-                  </select>
+                    Paste JSON
+                  </button>
                 </div>
+              )}
 
-                {/* Image Upload */}
-                <div>
-                  <label className="form-label">Image</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      name="image_url"
-                      value={formData.image_url}
-                      onChange={handleInputChange}
-                      className="form-input flex-1"
-                      placeholder="Image URL"
-                    />
-                    <label className="btn btn-secondary cursor-pointer">
-                      <Upload size={16} />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                      />
-                    </label>
+              {/* Paste JSON Interface */}
+              {uploadMode === "paste" && !editingNews && (
+                <div className="space-y-3">
+                  <label className="form-label">Paste News JSON</label>
+                  <textarea
+                    value={pasteContent}
+                    onChange={(e) => setPasteContent(e.target.value)}
+                    className="form-textarea font-mono text-xs"
+                    rows={12}
+                    placeholder='Paste your JSON here... Format: {"headline": "...", "source": "...", "tier": 1, ...}'
+                  />
+                  <button
+                    type="button"
+                    onClick={handlePasteContent}
+                    className="btn-primary w-full"
+                  >
+                    Parse & Load JSON
+                  </button>
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <p>Expected format:</p>
+                    <pre className="bg-gray-100 p-2 rounded overflow-x-auto">
+                      {`{
+  "headline": "Story title",
+  "source": "Publication",
+  "url": "https://...",
+  "tier": 1,
+  "summary": "Brief summary",
+  "key_stat": {"value": "1000", "label": "Jobs"},
+  "affected_roles": ["Role 1", "Role 2"],
+  "companies": ["Company"],
+  "tags": ["AI", "Layoffs"]
+}`}
+                    </pre>
                   </div>
                 </div>
+              )}
 
-                {/* Key Stat */}
-                <div>
-                  <label className="form-label">Key Stat Value</label>
-                  <input
-                    type="text"
-                    name="key_stat_value"
-                    value={formData.key_stat_value}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    placeholder="e.g., 40%"
-                  />
-                </div>
+              {/* Form Fields - Show when in form mode or after paste */}
+              {(uploadMode === "form" || editingNews) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Title */}
+                  <div className="md:col-span-2">
+                    <label className="form-label">Title *</label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      required
+                      className="form-input"
+                      placeholder="News headline"
+                    />
+                  </div>
 
-                <div>
-                  <label className="form-label">Key Stat Label</label>
-                  <input
-                    type="text"
-                    name="key_stat_label"
-                    value={formData.key_stat_label}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    placeholder="e.g., Jobs Affected"
-                  />
-                </div>
+                  {/* Source */}
+                  <div>
+                    <label className="form-label">Source</label>
+                    <input
+                      type="text"
+                      name="source"
+                      value={formData.source}
+                      onChange={handleInputChange}
+                      className="form-input"
+                      placeholder="e.g., Reuters"
+                    />
+                  </div>
 
-                {/* Secondary Stat */}
-                <div>
-                  <label className="form-label">Secondary Stat Value</label>
-                  <input
-                    type="text"
-                    name="secondary_stat_value"
-                    value={formData.secondary_stat_value}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    placeholder="e.g., 2,000"
-                  />
-                </div>
+                  {/* Source URL */}
+                  <div>
+                    <label className="form-label">Source URL</label>
+                    <input
+                      type="url"
+                      name="source_url"
+                      value={formData.source_url}
+                      onChange={handleInputChange}
+                      className="form-input"
+                      placeholder="https://..."
+                    />
+                  </div>
 
-                <div>
-                  <label className="form-label">Secondary Stat Label</label>
-                  <input
-                    type="text"
-                    name="secondary_stat_label"
-                    value={formData.secondary_stat_label}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    placeholder="e.g., Layoffs"
-                  />
-                </div>
+                  {/* Summary */}
+                  <div className="md:col-span-2">
+                    <label className="form-label">Summary</label>
+                    <textarea
+                      name="summary"
+                      value={formData.summary}
+                      onChange={handleInputChange}
+                      className="form-textarea"
+                      rows={3}
+                      placeholder="Brief summary of the news"
+                    />
+                  </div>
 
-                {/* Tags */}
-                <div>
-                  <label className="form-label">Tags (comma-separated)</label>
-                  <input
-                    type="text"
-                    name="tags"
-                    value={formData.tags}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    placeholder="AI, Layoffs, Tech"
-                  />
-                </div>
+                  {/* Description */}
+                  <div className="md:col-span-2">
+                    <label className="form-label">Description *</label>
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={handleInputChange}
+                      required
+                      className="form-textarea"
+                      rows={5}
+                      placeholder="Full description"
+                    />
+                  </div>
 
-                {/* Affected Roles */}
-                <div>
-                  <label className="form-label">
-                    Affected Roles (comma-separated)
-                  </label>
-                  <input
-                    type="text"
-                    name="affected_roles"
-                    value={formData.affected_roles}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    placeholder="Customer Support, Sales"
-                  />
-                </div>
+                  {/* Category */}
+                  <div>
+                    <label className="form-label">Category</label>
+                    <input
+                      type="text"
+                      name="category"
+                      value={formData.category}
+                      onChange={handleInputChange}
+                      className="form-input"
+                      placeholder="e.g., Technology"
+                    />
+                  </div>
 
-                {/* Companies */}
-                <div className="md:col-span-2">
-                  <label className="form-label">
-                    Companies (comma-separated)
-                  </label>
-                  <input
-                    type="text"
-                    name="companies"
-                    value={formData.companies}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    placeholder="Meta, Google, Microsoft"
-                  />
+                  {/* Tier */}
+                  <div>
+                    <label className="form-label">Tier</label>
+                    <select
+                      name="tier"
+                      value={formData.tier}
+                      onChange={handleInputChange}
+                      className="form-input"
+                    >
+                      <option value="tier_1">Tier 1 - Major (Crimson)</option>
+                      <option value="tier_2">Tier 2 - Medium (Gold)</option>
+                      <option value="tier_3">Tier 3 - Minor (Teal)</option>
+                    </select>
+                  </div>
+
+                  {/* Status */}
+                  <div>
+                    <label className="form-label">Status</label>
+                    <select
+                      name="status"
+                      value={formData.status}
+                      onChange={handleInputChange}
+                      className="form-input"
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="published">Published</option>
+                    </select>
+                  </div>
+
+                  {/* Image Upload */}
+                  <div>
+                    <label className="form-label">Image</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        name="image_url"
+                        value={formData.image_url}
+                        onChange={handleInputChange}
+                        className="form-input flex-1"
+                        placeholder="Image URL"
+                      />
+                      <label className="btn btn-secondary cursor-pointer">
+                        <Upload size={16} />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Key Stat */}
+                  <div>
+                    <label className="form-label">Key Stat Value</label>
+                    <input
+                      type="text"
+                      name="key_stat_value"
+                      value={formData.key_stat_value}
+                      onChange={handleInputChange}
+                      className="form-input"
+                      placeholder="e.g., 40%"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="form-label">Key Stat Label</label>
+                    <input
+                      type="text"
+                      name="key_stat_label"
+                      value={formData.key_stat_label}
+                      onChange={handleInputChange}
+                      className="form-input"
+                      placeholder="e.g., Jobs Affected"
+                    />
+                  </div>
+
+                  {/* Secondary Stat */}
+                  <div>
+                    <label className="form-label">Secondary Stat Value</label>
+                    <input
+                      type="text"
+                      name="secondary_stat_value"
+                      value={formData.secondary_stat_value}
+                      onChange={handleInputChange}
+                      className="form-input"
+                      placeholder="e.g., 2,000"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="form-label">Secondary Stat Label</label>
+                    <input
+                      type="text"
+                      name="secondary_stat_label"
+                      value={formData.secondary_stat_label}
+                      onChange={handleInputChange}
+                      className="form-input"
+                      placeholder="e.g., Layoffs"
+                    />
+                  </div>
+
+                  {/* Tags */}
+                  <div>
+                    <label className="form-label">Tags (comma-separated)</label>
+                    <input
+                      type="text"
+                      name="tags"
+                      value={formData.tags}
+                      onChange={handleInputChange}
+                      className="form-input"
+                      placeholder="AI, Layoffs, Tech"
+                    />
+                  </div>
+
+                  {/* Affected Roles */}
+                  <div>
+                    <label className="form-label">
+                      Affected Roles (comma-separated)
+                    </label>
+                    <input
+                      type="text"
+                      name="affected_roles"
+                      value={formData.affected_roles}
+                      onChange={handleInputChange}
+                      className="form-input"
+                      placeholder="Customer Support, Sales"
+                    />
+                  </div>
+
+                  {/* Companies */}
+                  <div className="md:col-span-2">
+                    <label className="form-label">
+                      Companies (comma-separated)
+                    </label>
+                    <input
+                      type="text"
+                      name="companies"
+                      value={formData.companies}
+                      onChange={handleInputChange}
+                      className="form-input"
+                      placeholder="Meta, Google, Microsoft"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
+              {/* End conditional div for form fields */}
 
               {/* Actions */}
               <div className="flex justify-end gap-4 pt-4 border-t border-platinum">

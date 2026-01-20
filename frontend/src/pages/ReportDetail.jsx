@@ -384,7 +384,8 @@ const ReportDetail = () => {
     requestAnimationFrame(animate);
 
     // Gauge animation for RPI score
-    const rpiScore = report.rpi_analysis?.score || 72;
+    const rpiData = getRpiData();
+    const rpiScore = rpiData?.score || 72;
     const gaugeInterval = setInterval(() => {
       setGaugeValue((prev) => {
         if (prev >= rpiScore) {
@@ -397,6 +398,62 @@ const ReportDetail = () => {
 
     return () => clearInterval(gaugeInterval);
   }, [report?.isGoldmanFeatured, report?.hero_stats, report?.rpi_analysis]);
+
+  // Helper to normalize RPI analysis data structure
+  const getRpiData = () => {
+    const rpiData = report.rpi_analysis || report.rpiAnalysis;
+    if (!rpiData) return null;
+
+    // If it has primary_role (new JSON format), extract from there
+    if (rpiData.primary_role) {
+      const primaryRole = rpiData.primary_role;
+      return {
+        role: primaryRole.role_title || "Role",
+        workers: primaryRole.experience_band || "",
+        salary: "",
+        score: primaryRole.summary?.rpi_score || 0,
+        tasks: (primaryRole.tasks || []).map((task) => ({
+          name: task.name || "",
+          weight: `${task.time_share_pct || 0}%`,
+          aps: (task.aps || 0) / 100, // Convert from 0-100 to 0-1
+          hrf: (task.hrf || 0) / 100, // Convert from 0-100 to 0-1
+          level: task.aps >= 70 ? "high" : task.aps >= 50 ? "moderate" : "low",
+          commentary: task.commentary || "",
+        })),
+      };
+    }
+
+    // Old format - return as is
+    return rpiData;
+  };
+
+  // Helper to normalize guidance data and handle duplicates
+  const getGuidanceData = () => {
+    const guidance = report.guidance || [];
+    if (!guidance || guidance.length === 0) return [];
+
+    // Group items with same title
+    const grouped = {};
+    guidance.forEach((card) => {
+      const title = card.title || "";
+      if (!grouped[title]) {
+        grouped[title] = {
+          title,
+          items: [],
+        };
+      }
+      // Add items from this card
+      if (card.items && Array.isArray(card.items)) {
+        grouped[title].items.push(...card.items);
+      }
+    });
+
+    // Convert back to array and deduplicate items within each card
+    return Object.values(grouped).map((card) => ({
+      ...card,
+      items: [...new Set(card.items)], // Remove duplicate items
+    }));
+  };
 
   const getTaskBarColor = (level) => {
     switch (level) {
@@ -489,18 +546,98 @@ const ReportDetail = () => {
   }
 
   // =====================================================
-  // FULL HTML CONTENT - Render standalone HTML reports in iframe
+  // FULL HTML CONTENT - Render standalone HTML reports with header/footer
   // =====================================================
-  // If the report has html_content (uploaded HTML file), render it directly
-  // The HTML file should be a complete standalone page with its own header/footer
+  // If the report has html_content (uploaded HTML file), render it with wrapper
   if (report.html_content) {
     return (
-      <iframe
-        srcDoc={report.html_content}
-        title={report.title}
-        className="w-full h-screen border-0"
-        style={{ display: "block", margin: 0, padding: 0 }}
-      />
+      <div className="min-h-screen bg-black">
+        {/* Sticky Header */}
+        <header className="bg-black/95 backdrop-blur-lg py-4 sticky top-0 z-50 border-b border-white/5">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 flex justify-between items-center">
+            <Link
+              to="/"
+              className="font-playfair text-xl sm:text-2xl text-white hover:text-crimson transition-colors"
+            >
+              Replace<span className="text-crimson">able</span>.ai
+            </Link>
+            <nav className="flex items-center gap-6">
+              <Link
+                to="/"
+                className="font-inter text-sm text-titanium hover:text-white transition-colors"
+              >
+                Intelligence
+              </Link>
+              <Link
+                to="/archive"
+                className="font-inter text-sm text-titanium hover:text-white transition-colors"
+              >
+                Archive
+              </Link>
+              <button
+                onClick={() => navigate(-1)}
+                className="flex items-center gap-2 font-inter text-sm text-titanium hover:text-white transition-colors"
+              >
+                <ArrowLeft size={16} />
+                Back
+              </button>
+            </nav>
+          </div>
+        </header>
+
+        {/* HTML Content */}
+        <div
+          className="report-html-content"
+          dangerouslySetInnerHTML={{ __html: report.html_content }}
+        />
+
+        {/* Footer (Non-Sticky) */}
+        <footer className="bg-black border-t border-white/5 py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+              <div>
+                <Link
+                  to="/"
+                  className="font-playfair text-xl text-white hover:text-crimson transition-colors"
+                >
+                  Replace<span className="text-crimson">able</span>.ai
+                </Link>
+                <p className="font-inter text-sm text-mist mt-3">
+                  Workforce intelligence powered by AI analysis
+                </p>
+              </div>
+              <div>
+                <h5 className="font-inter text-[10px] font-semibold uppercase tracking-widest text-mist mb-4">
+                  Intelligence
+                </h5>
+                <ul className="space-y-2">
+                  <li>
+                    <Link
+                      to="/"
+                      className="font-inter text-sm text-titanium hover:text-crimson transition-colors"
+                    >
+                      Latest Analysis
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/archive"
+                      className="font-inter text-sm text-titanium hover:text-crimson transition-colors"
+                    >
+                      Archive
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-6 border-t border-white/5">
+              <p className="font-inter text-xs text-gray-500">
+                © 2026 Replaceable.ai · All rights reserved
+              </p>
+            </div>
+          </div>
+        </footer>
+      </div>
     );
   }
 
@@ -716,7 +853,7 @@ const ReportDetail = () => {
           <div className="flex items-center gap-3 sm:gap-5">
             <span className="hidden sm:flex font-inter text-xs text-mist items-center gap-2">
               <Clock size={14} />
-              {report.reading_time || report.readingTime || 12} min read
+              {report.reading_time || report.readingTime || 8} min read
             </span>
             <span className="font-inter text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider bg-crimson text-white px-2 sm:px-3 py-1 sm:py-1.5">
               Tier 1 Analysis
@@ -1162,7 +1299,7 @@ const ReportDetail = () => {
       )}
 
       {/* RPI Analysis Section */}
-      {(report.rpi_analysis || report.rpiAnalysis) && (
+      {getRpiData() && (
         <section className="py-16 sm:py-24 lg:py-32 bg-white" id="analysis">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
             <div className="flex items-center gap-3 mb-4">
@@ -1189,11 +1326,11 @@ const ReportDetail = () => {
               {/* Score Panel */}
               <div className="bg-black p-8 sm:p-12 lg:p-16 flex flex-col items-center justify-center text-center">
                 <div className="font-playfair text-xl sm:text-2xl lg:text-3xl text-white mb-2">
-                  {(report.rpi_analysis || report.rpiAnalysis)?.role}
+                  {getRpiData()?.role}
                 </div>
                 <div className="font-inter text-xs sm:text-sm text-mist mb-6 sm:mb-10">
-                  {(report.rpi_analysis || report.rpiAnalysis)?.workers} ·{" "}
-                  {(report.rpi_analysis || report.rpiAnalysis)?.salary}
+                  {getRpiData()?.workers}
+                  {getRpiData()?.salary && ` · ${getRpiData()?.salary}`}
                 </div>
 
                 {/* Gauge */}
@@ -1244,9 +1381,7 @@ const ReportDetail = () => {
 
                 {/* Mobile: Simplified Cards */}
                 <div className="block lg:hidden space-y-4">
-                  {(
-                    (report.rpi_analysis || report.rpiAnalysis)?.tasks || []
-                  ).map((task, i) => (
+                  {(getRpiData()?.tasks || []).map((task, i) => (
                     <div key={i} className="p-3 bg-gray-50 rounded">
                       <div className="flex justify-between items-center mb-2">
                         <span className="font-inter text-sm font-medium text-charcoal">
@@ -1265,8 +1400,8 @@ const ReportDetail = () => {
                         ></div>
                       </div>
                       <div className="flex gap-4 text-xs text-gray-500">
-                        <span>APS: {task.aps}</span>
-                        <span>HRF: {task.hrf}</span>
+                        <span>APS: {Math.round(task.aps * 100)}%</span>
+                        <span>HRF: {Math.round(task.hrf * 100)}%</span>
                       </div>
                     </div>
                   ))}
@@ -1274,9 +1409,7 @@ const ReportDetail = () => {
 
                 {/* Desktop: Grid View */}
                 <div className="hidden lg:block">
-                  {(
-                    (report.rpi_analysis || report.rpiAnalysis)?.tasks || []
-                  ).map((task, i) => (
+                  {(getRpiData()?.tasks || []).map((task, i) => (
                     <div
                       key={i}
                       className="grid grid-cols-[180px_1fr_50px_50px_50px] gap-4 items-center py-4 border-b border-platinum"
@@ -1296,10 +1429,10 @@ const ReportDetail = () => {
                         {task.weight}
                       </div>
                       <div className="font-inter text-xs text-gray-500 text-center">
-                        {task.aps}
+                        {Math.round(task.aps * 100)}%
                       </div>
                       <div className="font-inter text-xs text-gray-500 text-center">
-                        {task.hrf}
+                        {Math.round(task.hrf * 100)}%
                       </div>
                     </div>
                   ))}
@@ -1438,10 +1571,10 @@ const ReportDetail = () => {
                     {item.date}
                   </div>
                   <div className="font-playfair text-xl sm:text-2xl lg:text-3xl text-white mb-2 sm:mb-3">
-                    {item.title}
+                    {item.title || item.event}
                   </div>
                   <p className="font-crimson text-base sm:text-lg text-titanium leading-relaxed max-w-2xl">
-                    {item.desc}
+                    {item.desc || item.impact}
                   </p>
                 </div>
               ))}
@@ -1472,7 +1605,7 @@ const ReportDetail = () => {
             </p>
 
             <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
-              {(report.guidance || []).map((card, i) => (
+              {getGuidanceData().map((card, i) => (
                 <div
                   key={i}
                   className="bg-white border border-platinum p-6 sm:p-8 lg:p-12 hover:border-crimson hover:shadow-xl transition-all"
@@ -1538,12 +1671,23 @@ const ReportDetail = () => {
                     className="flex gap-2 sm:gap-3 font-inter text-sm"
                   >
                     <span className="font-semibold text-crimson min-w-[16px] sm:min-w-[20px]">
-                      {source.num}
+                      {source.num || i + 1}
                     </span>
                     <div>
-                      <span className="text-charcoal hover:text-crimson transition-colors cursor-pointer">
-                        {source.text}
-                      </span>
+                      {source.url ? (
+                        <a
+                          href={source.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-charcoal hover:text-crimson transition-colors underline"
+                        >
+                          {source.title || source.text}
+                        </a>
+                      ) : (
+                        <span className="text-charcoal">
+                          {source.title || source.text}
+                        </span>
+                      )}
                       <span className="block text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">
                         {source.date}
                       </span>

@@ -280,6 +280,56 @@ Admin Dashboard                     Public Pages
               Public News Page
 ```
 
+## ⚡ Admin Features
+
+### Report Creation - 3 Methods Available
+
+The admin panel offers **three powerful methods** to create reports:
+
+#### 1. 📝 Fill Manually
+
+Traditional form-based entry for simple reports or quick drafts.
+
+#### 2. 📋 Paste Full Report ⭐ NEW!
+
+**Time Saver**: Create rich reports in 2-3 minutes instead of 20-30 minutes!
+
+- Paste complete report as JSON to auto-fill all fields
+- Supports all rich report features (hero stats, metrics, timeline, etc.)
+- "Load Example" button for template reference
+- JSON validation with helpful error messages
+- 80-90% time savings compared to manual entry
+
+**Quick Start:**
+
+```javascript
+// 1. Click "Create Report" → "Paste Full Report"
+// 2. Paste JSON content or click "Load Example"
+// 3. Click "Parse & Fill" → All fields auto-populated!
+// 4. Review and create → Done in 2 minutes!
+```
+
+**Documentation:**
+
+- 📖 [Complete Usage Guide](REPORT_PASTE_GUIDE.md)
+- 📊 [Methods Comparison](REPORT_METHODS_COMPARISON.md)
+- 🎨 [Visual Guide](VISUAL_GUIDE.md)
+- 📋 [Example Template](report-template-example.json)
+
+#### 3. 📄 Upload HTML
+
+Upload pre-designed HTML reports for standalone pages.
+
+### Other Admin Capabilities
+
+- **News Management**: Create, edit, delete news items
+- **Intelligence Cards**: Manage cards with rich content
+- **File Uploads**: Images and PDFs
+- **Status Toggle**: Draft/Published control
+- **Rich Text**: Markdown support in content fields
+- **Preview**: Real-time preview before publishing
+- **Email**: Send report previews to managers
+
 ## 🛡️ Security Features
 
 - **JWT Authentication**: Secure token-based auth
@@ -376,7 +426,6 @@ Admin Dashboard                     Public Pages
    ```
 
 2. **Import to Vercel**
-
    - Go to [vercel.com](https://vercel.com)
    - Click "Add New Project"
    - Import `dheerendra45/news_analyzer`

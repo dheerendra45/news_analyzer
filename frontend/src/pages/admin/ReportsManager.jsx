@@ -50,12 +50,12 @@ const ReportsManager = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingReport, setEditingReport] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [showRichFields, setShowRichFields] = useState(false);
 
-  // Upload mode: 'manual' or 'html'
+  // Upload mode: 'manual', 'html', or 'paste'
   const [uploadMode, setUploadMode] = useState("manual");
   const [htmlContent, setHtmlContent] = useState("");
   const [showPreview, setShowPreview] = useState(false);
+  const [pasteContent, setPasteContent] = useState("");
 
   // Send to Manager state
   const [showSendModal, setShowSendModal] = useState(false);
@@ -75,8 +75,8 @@ const ReportsManager = () => {
     status: "draft",
     reading_time: "",
     author: "",
-    // Rich report fields
-    is_rich_report: false,
+    // Rich report fields (always enabled)
+    is_rich_report: true,
     subtitle: "",
     label: "",
     tier: "tier_1",
@@ -132,8 +132,8 @@ const ReportsManager = () => {
       status: "draft",
       reading_time: "",
       author: "",
-      // Rich report fields
-      is_rich_report: false,
+      // Rich report fields (always enabled)
+      is_rich_report: true,
       subtitle: "",
       label: "",
       tier: "tier_1",
@@ -149,9 +149,9 @@ const ReportsManager = () => {
       sources: "[]",
     });
     setEditingReport(null);
-    setShowRichFields(false);
     setUploadMode("manual");
     setHtmlContent("");
+    setPasteContent("");
   };
 
   const openCreateModal = () => {
@@ -196,11 +196,251 @@ const ReportsManager = () => {
     }
   };
 
+  // Handle Paste Full Report Content
+  const handlePasteContent = () => {
+    if (!pasteContent.trim()) {
+      toast.error("Please paste some content first");
+      return;
+    }
+
+    try {
+      // Try to parse as JSON first
+      let parsed = JSON.parse(pasteContent);
+
+      // Check if it's a nested structure with "report" wrapper
+      if (parsed.report) {
+        parsed = parsed.report;
+      }
+
+      // Helper to safely stringify or use value
+      const safeStringify = (val, defaultVal) => {
+        if (val === undefined || val === null) {
+          return typeof defaultVal === "string"
+            ? defaultVal
+            : JSON.stringify(defaultVal, null, 2);
+        }
+        return typeof val === "string" ? val : JSON.stringify(val, null, 2);
+      };
+
+      // Helper to clean citation references like [web:158]
+      const cleanCitations = (text) => {
+        if (!text || typeof text !== "string") return text || "";
+        return text.replace(/\[web:\d+\]/g, "").trim();
+      };
+
+      // Helper to convert stats_panel to hero_stats format
+      const convertStatsPanel = (statsPanel) => {
+        if (!statsPanel || !Array.isArray(statsPanel)) return [];
+        return statsPanel.map((stat) => ({
+          label: String(stat.label || ""),
+          value: String(stat.value || ""),
+          target: parseInt(
+            String(stat.value || "0").replace(/[^0-9-]/g, "") || "0",
+          ),
+          context: String(stat.context || ""),
+          percent: Number(stat.percent) || 0,
+        }));
+      };
+
+      // Helper to convert executive_summary to exec_summary format
+      const convertExecSummary = (execSummary) => {
+        if (!execSummary) return {};
+
+        // If already in correct format with paragraphs, return as is
+        if (execSummary.paragraphs && Array.isArray(execSummary.paragraphs)) {
+          return execSummary;
+        }
+
+        // If it has title and points (old format), convert to paragraphs
+        if (execSummary.title && execSummary.points) {
+          return {
+            paragraphs: execSummary.points,
+            stats: execSummary.stats || [],
+          };
+        }
+
+        // If it has blocks array (JSON format), convert each block to a paragraph
+        if (execSummary.blocks && Array.isArray(execSummary.blocks)) {
+          return {
+            paragraphs: execSummary.blocks.map((block) => {
+              const title = block.title ? `**${block.title}**: ` : "";
+              const body = cleanCitations(String(block.body || ""));
+              return `${title}${body}`;
+            }),
+            stats: execSummary.stats || [],
+          };
+        }
+
+        return {
+          paragraphs: [],
+          stats: [],
+        };
+      };
+
+      // Helper to convert timeline - handle both formats
+      const convertTimeline = (timelineData) => {
+        if (!timelineData) return [];
+        // If it's already an array of {date, event, impact}, return as is
+        if (Array.isArray(timelineData)) {
+          return timelineData.map((item) => ({
+            date: String(item.date || item.phase || ""),
+            event: String(item.event || item.status || ""),
+            impact: cleanCitations(
+              String(item.impact || item.description || ""),
+            ),
+          }));
+        }
+        // If it's an object with phases array
+        if (timelineData.phases && Array.isArray(timelineData.phases)) {
+          return timelineData.phases.map((phase) => ({
+            date: String(phase.phase || ""),
+            event: String(phase.status || ""),
+            impact: cleanCitations(String(phase.description || "")),
+          }));
+        }
+        return [];
+      };
+
+      // Helper to convert guidance - handle both formats
+      const convertGuidance = (guidanceData) => {
+        if (!guidanceData) return [];
+
+        // If it's already an array of {title, items}, return as is
+        if (Array.isArray(guidanceData) && guidanceData[0]?.items) {
+          return guidanceData;
+        }
+
+        // If it's an array of {icon, title, recommendation}, convert to grouped format
+        if (Array.isArray(guidanceData) && guidanceData[0]?.recommendation) {
+          // Group by title
+          const grouped = {};
+          guidanceData.forEach((item) => {
+            const title = String(item.title || "");
+            if (!grouped[title]) {
+              grouped[title] = [];
+            }
+            grouped[title].push(
+              cleanCitations(String(item.recommendation || "")),
+            );
+          });
+          return Object.entries(grouped).map(([title, items]) => ({
+            title,
+            items,
+          }));
+        }
+
+        // If it has audiences array (nested format from JSON)
+        if (guidanceData.audiences && Array.isArray(guidanceData.audiences)) {
+          return guidanceData.audiences.map((audience) => ({
+            title: String(audience.audience || ""),
+            items: (audience.actions || []).map((action) =>
+              cleanCitations(String(action || "")),
+            ),
+          }));
+        }
+
+        return [];
+      };
+
+      // Helper to convert sources - handle both formats
+      const convertSources = (sourcesData) => {
+        if (!sourcesData) return [];
+        if (!Array.isArray(sourcesData)) return [];
+        return sourcesData.map((source) => ({
+          title: String(source.title || ""),
+          url: String(source.url || ""),
+          date: String(source.date || ""),
+        }));
+      };
+
+      // Determine hero_stats
+      let heroStats = [];
+      if (parsed.hero_stats && Array.isArray(parsed.hero_stats)) {
+        heroStats = parsed.hero_stats;
+      } else if (parsed.stats_panel && Array.isArray(parsed.stats_panel)) {
+        heroStats = convertStatsPanel(parsed.stats_panel);
+      }
+
+      // Determine exec_summary
+      let execSummary = {};
+      if (parsed.exec_summary) {
+        execSummary = parsed.exec_summary;
+      } else if (parsed.executive_summary) {
+        execSummary = convertExecSummary(parsed.executive_summary);
+      }
+
+      // Determine timeline
+      let timeline = [];
+      if (parsed.timeline) {
+        timeline = convertTimeline(parsed.timeline);
+      }
+
+      // Determine guidance
+      let guidance = [];
+      if (parsed.guidance) {
+        guidance = convertGuidance(parsed.guidance);
+      }
+
+      // Determine sources
+      let sources = [];
+      if (parsed.sources) {
+        sources = convertSources(parsed.sources);
+      }
+
+      // Extract summary - clean it and truncate if needed
+      let summaryText =
+        parsed.summary ||
+        parsed.hero?.why_this_matters ||
+        parsed.executive_summary?.blocks?.[0]?.body ||
+        "";
+      summaryText = cleanCitations(summaryText);
+
+      // Update form data with parsed content
+      setFormData({
+        title:
+          parsed.title || parsed.meta?.title || parsed.hero?.headline || "",
+        summary: summaryText,
+        content: parsed.content || "",
+        file_url: parsed.file_url || "",
+        pdf_url: parsed.pdf_url || "",
+        cover_image_url: parsed.cover_image_url || "",
+        tags: Array.isArray(parsed.tags)
+          ? parsed.tags.join(", ")
+          : parsed.tags || "",
+        status: parsed.status || "draft",
+        reading_time: parsed.reading_time?.toString() || "",
+        author: parsed.author || parsed.meta?.author || "",
+        // Rich report fields (always enabled)
+        is_rich_report: true,
+        subtitle: parsed.subtitle || parsed.hero?.subtitle || "",
+        label: parsed.label || parsed.meta?.date_context || "",
+        tier: parsed.tier || "tier_1",
+        hero_context: cleanCitations(
+          parsed.hero_context || parsed.hero?.why_this_matters || "",
+        ),
+        hero_stats: safeStringify(heroStats, []),
+        exec_summary: safeStringify(execSummary, {}),
+        metrics: safeStringify(parsed.metrics || [], []),
+        data_table: safeStringify(parsed.data_table || [], []),
+        rpi_analysis: safeStringify(parsed.rpi_analysis || {}, {}),
+        risk_buckets: safeStringify(parsed.risk_buckets || [], []),
+        timeline: safeStringify(timeline, []),
+        guidance: safeStringify(guidance, []),
+        sources: safeStringify(sources, []),
+      });
+
+      toast.success("Report content parsed and loaded successfully!");
+      setPasteContent(""); // Clear the paste area
+    } catch (err) {
+      toast.error(
+        "Invalid JSON format. Please check your content and try again.",
+      );
+      console.error("Parse error:", err);
+    }
+  };
+
   const openEditModal = (item) => {
     setEditingReport(item);
-    const isRich =
-      item.is_rich_report || (item.hero_stats && item.hero_stats.length > 0);
-    setShowRichFields(isRich);
     // If report has html_content, set upload mode to html and load the content
     if (item.html_content) {
       setUploadMode("html");
@@ -220,8 +460,8 @@ const ReportsManager = () => {
       status: item.status || "draft",
       reading_time: item.reading_time?.toString() || "",
       author: item.author || "",
-      // Rich report fields
-      is_rich_report: item.is_rich_report || false,
+      // Rich report fields (always enabled)
+      is_rich_report: true,
       subtitle: item.subtitle || "",
       label: item.label || "",
       tier: item.tier || "tier_1",
@@ -337,8 +577,25 @@ const ReportsManager = () => {
       closeModal();
       fetchReports();
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Failed to save report");
-      console.error(err);
+      // Handle validation errors properly
+      const errorData = err.response?.data;
+      let errorMessage = "Failed to save report";
+
+      if (errorData) {
+        if (typeof errorData.detail === "string") {
+          errorMessage = errorData.detail;
+        } else if (Array.isArray(errorData.detail)) {
+          // Pydantic validation errors come as array
+          errorMessage = errorData.detail
+            .map((e) => `${e.loc?.join(" → ") || "Field"}: ${e.msg}`)
+            .join(", ");
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      }
+
+      toast.error(errorMessage);
+      console.error("Submit error:", err);
     } finally {
       setSaving(false);
     }
@@ -896,32 +1153,46 @@ const ReportsManager = () => {
                       Create Method
                     </h3>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => setUploadMode("manual")}
-                      className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 border-2 transition-all ${
+                      className={`flex flex-col items-center justify-center gap-2 py-3 px-2 border-2 transition-all ${
                         uploadMode === "manual"
                           ? "border-crimson bg-crimson/5 text-crimson"
                           : "border-platinum bg-white text-gray-600 hover:border-gray-400"
                       }`}
                     >
                       <Edit2 size={18} />
-                      <span className="font-inter text-sm font-medium">
+                      <span className="font-inter text-xs font-medium">
                         Fill Manually
                       </span>
                     </button>
                     <button
                       type="button"
+                      onClick={() => setUploadMode("paste")}
+                      className={`flex flex-col items-center justify-center gap-2 py-3 px-2 border-2 transition-all ${
+                        uploadMode === "paste"
+                          ? "border-crimson bg-crimson/5 text-crimson"
+                          : "border-platinum bg-white text-gray-600 hover:border-gray-400"
+                      }`}
+                    >
+                      <Copy size={18} />
+                      <span className="font-inter text-xs font-medium">
+                        Paste Full Report
+                      </span>
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setUploadMode("html")}
-                      className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 border-2 transition-all ${
+                      className={`flex flex-col items-center justify-center gap-2 py-3 px-2 border-2 transition-all ${
                         uploadMode === "html"
                           ? "border-crimson bg-crimson/5 text-crimson"
                           : "border-platinum bg-white text-gray-600 hover:border-gray-400"
                       }`}
                     >
                       <FileCode size={18} />
-                      <span className="font-inter text-sm font-medium">
+                      <span className="font-inter text-xs font-medium">
                         Upload HTML
                       </span>
                     </button>
@@ -988,219 +1259,301 @@ const ReportsManager = () => {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                {/* Title */}
-                <div className="md:col-span-2">
-                  <label className="form-label">Title *</label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    required
-                    className="form-input"
-                    placeholder="Report title"
-                  />
-                </div>
-
-                {/* Author */}
-                <div>
-                  <label className="form-label">Author</label>
-                  <input
-                    type="text"
-                    name="author"
-                    value={formData.author}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    placeholder="Author name"
-                  />
-                </div>
-
-                {/* Reading Time */}
-                <div>
-                  <label className="form-label">Reading Time (minutes)</label>
-                  <input
-                    type="number"
-                    name="reading_time"
-                    value={formData.reading_time}
-                    onChange={handleInputChange}
-                    min="1"
-                    className="form-input"
-                    placeholder="e.g., 15"
-                  />
-                </div>
-
-                {/* Summary */}
-                <div className="md:col-span-2">
-                  <label className="form-label">Summary *</label>
-                  <textarea
-                    name="summary"
-                    value={formData.summary}
-                    onChange={handleInputChange}
-                    required
-                    className="form-textarea"
-                    rows={3}
-                    placeholder="Brief summary of the report"
-                  />
-                </div>
-
-                {/* Content */}
-                <div className="md:col-span-2">
-                  <label className="form-label">Content</label>
-                  <textarea
-                    name="content"
-                    value={formData.content}
-                    onChange={handleInputChange}
-                    className="form-textarea"
-                    rows={8}
-                    placeholder="Full report content (optional)"
-                  />
-                </div>
-
-                {/* Status */}
-                <div>
-                  <label className="form-label">Status</label>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleInputChange}
-                    className="form-input"
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="published">Published</option>
-                  </select>
-                </div>
-
-                {/* Tags */}
-                <div>
-                  <label className="form-label">Tags (comma-separated)</label>
-                  <input
-                    type="text"
-                    name="tags"
-                    value={formData.tags}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    placeholder="AI, Workforce, Research"
-                  />
-                </div>
-
-                {/* Cover Image */}
-                <div className="md:col-span-2">
-                  <label className="form-label">Cover Image</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      name="cover_image_url"
-                      value={formData.cover_image_url}
-                      onChange={handleInputChange}
-                      className="form-input flex-1"
-                      placeholder="Cover image URL"
-                    />
-                    <label className="btn btn-secondary cursor-pointer">
-                      <Upload size={16} />
-                      Upload
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                {/* PDF URL */}
-                <div className="md:col-span-2">
-                  <label className="form-label">PDF File (optional)</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      name="pdf_url"
-                      value={formData.pdf_url}
-                      onChange={handleInputChange}
-                      className="form-input flex-1"
-                      placeholder="PDF URL"
-                    />
-                    <label className="btn btn-secondary cursor-pointer">
-                      <Upload size={16} />
-                      Upload PDF
-                      <input
-                        type="file"
-                        accept=".pdf"
-                        onChange={handlePdfUpload}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                {/* File URL */}
-                <div className="md:col-span-2">
-                  <label className="form-label">
-                    External File URL (optional)
-                  </label>
-                  <input
-                    type="url"
-                    name="file_url"
-                    value={formData.file_url}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    placeholder="https://..."
-                  />
-                </div>
-              </div>
-
-              {/* Rich Report Toggle */}
-              <div className="border border-platinum p-4 bg-gray-50">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Sparkles size={20} className="text-crimson" />
-                    <div>
-                      <h3 className="font-inter font-semibold text-sm">
-                        Rich Report Mode
+              {/* Paste Full Report Section */}
+              {uploadMode === "paste" && !editingReport && (
+                <div className="bg-purple-50 border border-purple-200 p-4 rounded">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Copy size={20} className="text-purple-600" />
+                    <div className="flex-1">
+                      <h3 className="font-inter font-semibold text-sm text-purple-900">
+                        Paste Full Report Content
                       </h3>
-                      <p className="font-inter text-xs text-gray-500">
-                        Enable advanced report features like hero stats,
-                        timeline, and more
+                      <p className="font-inter text-xs text-purple-700">
+                        Paste complete report as JSON to auto-fill all fields
                       </p>
                     </div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      name="is_rich_report"
-                      checked={formData.is_rich_report}
-                      onChange={(e) => {
-                        setFormData((prev) => ({
-                          ...prev,
-                          is_rich_report: e.target.checked,
-                        }));
-                        setShowRichFields(e.target.checked);
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const exampleTemplate = {
+                          title: "AI Workforce Impact Report Q1 2026",
+                          subtitle:
+                            "Comprehensive analysis of AI-driven workforce transformation",
+                          author: "Research Team",
+                          summary:
+                            "This quarterly report examines the accelerating impact of AI on workforce dynamics...",
+                          content:
+                            "# Executive Overview\n\nThe first quarter of 2026 marks a significant inflection point...",
+                          tags: ["AI", "Workforce", "Research"],
+                          reading_time: 15,
+                          status: "published",
+                          is_rich_report: true,
+                          label:
+                            "Workforce Intelligence Briefing · January 2026",
+                          tier: "tier_1",
+                          hero_context:
+                            "As AI capabilities accelerate, understanding workforce impact is critical...",
+                          hero_stats: [
+                            {
+                              label: "AI-Cited Layoffs",
+                              value: "54,694",
+                              target: 54694,
+                              context: "Up 75% from Q4 2025",
+                              percent: 75,
+                            },
+                          ],
+                          exec_summary: {
+                            title: "Executive Summary",
+                            points: [
+                              "AI-cited workforce reductions increased 75% quarter-over-quarter",
+                              "Technology sector leads with 68% of total displacement",
+                            ],
+                          },
+                          metrics: [],
+                          timeline: [],
+                          guidance: [],
+                          sources: [],
+                        };
+                        setPasteContent(
+                          JSON.stringify(exampleTemplate, null, 2),
+                        );
+                        toast.success("Example template loaded!");
                       }}
-                      className="sr-only peer"
+                      className="btn btn-sm bg-purple-100 text-purple-700 hover:bg-purple-200 whitespace-nowrap"
+                    >
+                      <FileText size={14} />
+                      Load Example
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <textarea
+                      value={pasteContent}
+                      onChange={(e) => setPasteContent(e.target.value)}
+                      className="w-full border-2 border-purple-300 rounded-lg p-3 font-mono text-xs resize-y min-h-[200px] focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
+                      placeholder={`Paste your report JSON here, for example:
+{
+  "title": "AI Workforce Impact Report Q1 2026",
+  "subtitle": "Comprehensive analysis of AI-driven workforce changes",
+  "author": "Research Team",
+  "summary": "This report analyzes...",
+  "content": "Full report content here...",
+  "tags": ["AI", "Workforce", "Research"],
+  "reading_time": 15,
+  "status": "published",
+  "is_rich_report": true,
+  "label": "Workforce Intelligence Briefing · January 2026",
+  "tier": "tier_1",
+  "hero_context": "Why this matters...",
+  "hero_stats": [
+    {
+      "label": "AI-Cited Layoffs",
+      "value": "54,694",
+      "target": 54694,
+      "context": "Up 75% from Q1 baseline",
+      "percent": 75
+    }
+  ],
+  "metrics": [...],
+  "timeline": [...],
+  ...and more
+}`}
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-crimson"></div>
-                  </label>
+
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex-1 bg-purple-100 p-2 rounded text-xs text-purple-800">
+                        <p className="font-semibold mb-1">📋 Tip:</p>
+                        <p>
+                          Copy the entire report structure as JSON. All fields
+                          will be automatically populated. Rich report fields
+                          will be enabled if present.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handlePasteContent}
+                        disabled={!pasteContent.trim()}
+                        className="btn bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                      >
+                        <Sparkles size={16} />
+                        Parse & Fill
+                      </button>
+                    </div>
+                  </div>
                 </div>
+              )}
 
-                {showRichFields && (
-                  <button
-                    type="button"
-                    onClick={() => setShowRichFields(!showRichFields)}
-                    className="mt-3 flex items-center gap-2 text-sm text-crimson hover:text-deep-crimson"
-                  >
-                    {showRichFields ? (
-                      <ChevronUp size={16} />
-                    ) : (
-                      <ChevronDown size={16} />
-                    )}
-                    {showRichFields ? "Hide Rich Fields" : "Show Rich Fields"}
-                  </button>
-                )}
-              </div>
+              {/* Manual Form Fields - Only show in manual or paste mode after parsing, or when editing */}
+              {(uploadMode === "manual" ||
+                uploadMode === "paste" ||
+                editingReport) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                  {/* Title */}
+                  <div className="md:col-span-2">
+                    <label className="form-label">Title *</label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      required
+                      className="form-input"
+                      placeholder="Report title"
+                    />
+                  </div>
 
-              {/* Rich Report Fields */}
-              {showRichFields && formData.is_rich_report && (
+                  {/* Author */}
+                  <div>
+                    <label className="form-label">Author</label>
+                    <input
+                      type="text"
+                      name="author"
+                      value={formData.author}
+                      onChange={handleInputChange}
+                      className="form-input"
+                      placeholder="Author name"
+                    />
+                  </div>
+
+                  {/* Reading Time */}
+                  <div>
+                    <label className="form-label">Reading Time (minutes)</label>
+                    <input
+                      type="number"
+                      name="reading_time"
+                      value={formData.reading_time}
+                      onChange={handleInputChange}
+                      min="1"
+                      className="form-input"
+                      placeholder="e.g., 15"
+                    />
+                  </div>
+
+                  {/* Summary */}
+                  <div className="md:col-span-2">
+                    <label className="form-label">Summary *</label>
+                    <textarea
+                      name="summary"
+                      value={formData.summary}
+                      onChange={handleInputChange}
+                      required
+                      className="form-textarea"
+                      rows={3}
+                      placeholder="Brief summary of the report"
+                    />
+                  </div>
+
+                  {/* Content */}
+                  <div className="md:col-span-2">
+                    <label className="form-label">Content</label>
+                    <textarea
+                      name="content"
+                      value={formData.content}
+                      onChange={handleInputChange}
+                      className="form-textarea"
+                      rows={8}
+                      placeholder="Full report content (optional)"
+                    />
+                  </div>
+
+                  {/* Status */}
+                  <div>
+                    <label className="form-label">Status</label>
+                    <select
+                      name="status"
+                      value={formData.status}
+                      onChange={handleInputChange}
+                      className="form-input"
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="published">Published</option>
+                    </select>
+                  </div>
+
+                  {/* Tags */}
+                  <div>
+                    <label className="form-label">Tags (comma-separated)</label>
+                    <input
+                      type="text"
+                      name="tags"
+                      value={formData.tags}
+                      onChange={handleInputChange}
+                      className="form-input"
+                      placeholder="AI, Workforce, Research"
+                    />
+                  </div>
+
+                  {/* Cover Image */}
+                  <div className="md:col-span-2">
+                    <label className="form-label">Cover Image</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        name="cover_image_url"
+                        value={formData.cover_image_url}
+                        onChange={handleInputChange}
+                        className="form-input flex-1"
+                        placeholder="Cover image URL"
+                      />
+                      <label className="btn btn-secondary cursor-pointer">
+                        <Upload size={16} />
+                        Upload
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* PDF URL */}
+                  <div className="md:col-span-2">
+                    <label className="form-label">PDF File (optional)</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        name="pdf_url"
+                        value={formData.pdf_url}
+                        onChange={handleInputChange}
+                        className="form-input flex-1"
+                        placeholder="PDF URL"
+                      />
+                      <label className="btn btn-secondary cursor-pointer">
+                        <Upload size={16} />
+                        Upload PDF
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          onChange={handlePdfUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* File URL */}
+                  <div className="md:col-span-2">
+                    <label className="form-label">
+                      External File URL (optional)
+                    </label>
+                    <input
+                      type="url"
+                      name="file_url"
+                      value={formData.file_url}
+                      onChange={handleInputChange}
+                      className="form-input"
+                      placeholder="https://..."
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Rich Report Fields (Always Enabled) */}
+              {(uploadMode === "manual" ||
+                uploadMode === "paste" ||
+                editingReport) && (
                 <div className="space-y-6 border border-crimson/20 p-4 bg-crimson/5">
                   <div className="flex items-center justify-between border-b border-crimson/20 pb-2">
                     <h3 className="font-playfair text-lg">
@@ -1292,7 +1645,10 @@ const ReportsManager = () => {
                     <ExecSummaryBuilder
                       value={formData.exec_summary}
                       onChange={(val) =>
-                        setFormData((prev) => ({ ...prev, exec_summary: val }))
+                        setFormData((prev) => ({
+                          ...prev,
+                          exec_summary: val,
+                        }))
                       }
                     />
 
@@ -1316,7 +1672,10 @@ const ReportsManager = () => {
                     <RpiAnalysisBuilder
                       value={formData.rpi_analysis}
                       onChange={(val) =>
-                        setFormData((prev) => ({ ...prev, rpi_analysis: val }))
+                        setFormData((prev) => ({
+                          ...prev,
+                          rpi_analysis: val,
+                        }))
                       }
                     />
 
@@ -1324,7 +1683,10 @@ const ReportsManager = () => {
                     <RiskBucketsBuilder
                       value={formData.risk_buckets}
                       onChange={(val) =>
-                        setFormData((prev) => ({ ...prev, risk_buckets: val }))
+                        setFormData((prev) => ({
+                          ...prev,
+                          risk_buckets: val,
+                        }))
                       }
                     />
 

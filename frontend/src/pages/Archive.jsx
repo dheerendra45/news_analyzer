@@ -540,9 +540,16 @@ const Archive = () => {
                               src={card.company_logo}
                               alt={card.company}
                               className="company-logo-img"
+                              onError={(e) => {
+                                e.target.style.display = "none";
+                                e.target.parentElement.textContent =
+                                  card.company_icon ||
+                                  card.company.charAt(0).toUpperCase();
+                              }}
                             />
                           ) : (
-                            card.company_icon
+                            card.company_icon ||
+                            card.company.charAt(0).toUpperCase()
                           )}
                         </div>
                         <span className="company-name">{card.company}</span>
@@ -645,9 +652,16 @@ const Archive = () => {
                             src={card.company_logo}
                             alt={card.company}
                             className="company-logo-img"
+                            onError={(e) => {
+                              e.target.style.display = "none";
+                              e.target.parentElement.textContent =
+                                card.company_icon ||
+                                card.company.charAt(0).toUpperCase();
+                            }}
                           />
                         ) : (
-                          card.company_icon
+                          card.company_icon ||
+                          card.company.charAt(0).toUpperCase()
                         )}
                       </div>
                       <span className="list-item-company-name">

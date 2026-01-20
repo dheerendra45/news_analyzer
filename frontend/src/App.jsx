@@ -63,9 +63,13 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         >
+          <Route index element={null} />
           <Route path="cards" element={<CardsManager />} />
           <Route path="reports" element={<ReportsManager />} />
         </Route>
+
+        {/* Catch-all 404 - Redirect to home */}
+        <Route path="*" element={<Landing />} />
       </Routes>
     </Layout>
   );

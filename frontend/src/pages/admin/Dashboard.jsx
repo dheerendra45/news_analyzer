@@ -15,12 +15,14 @@ import {
   Star,
   Menu,
   X,
+  RefreshCw,
 } from "lucide-react";
 
 const Dashboard = () => {
   const location = useLocation();
   const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({
     totalCards: 0,
     publishedCards: 0,
@@ -34,30 +36,32 @@ const Dashboard = () => {
   const isActive = (path) => location.pathname === path;
   const isSection = (path) => location.pathname.startsWith(path);
 
+  const fetchStats = async () => {
+    setRefreshing(true);
+    try {
+      const [cardsStats, reportsPublished, reportsDraft] = await Promise.all([
+        intelligenceCardsAPI.getAdminStats(),
+        reportsAPI.getAll({ status: "published", size: 1 }),
+        reportsAPI.getAll({ status: "draft", size: 1 }),
+      ]);
+
+      setStats({
+        totalCards: cardsStats.total_cards || 0,
+        publishedCards: cardsStats.published_cards || 0,
+        draftCards: cardsStats.draft_cards || 0,
+        featuredCards: cardsStats.featured_cards || 0,
+        totalReports: (reportsPublished.total || 0) + (reportsDraft.total || 0),
+        publishedReports: reportsPublished.total || 0,
+        draftReports: reportsDraft.total || 0,
+      });
+    } catch (err) {
+      console.error("Failed to fetch stats:", err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const [cardsStats, reportsPublished, reportsDraft] = await Promise.all([
-          intelligenceCardsAPI.getAdminStats(),
-          reportsAPI.getAll({ status: "published", size: 1 }),
-          reportsAPI.getAll({ status: "draft", size: 1 }),
-        ]);
-
-        setStats({
-          totalCards: cardsStats.total_cards || 0,
-          publishedCards: cardsStats.published_cards || 0,
-          draftCards: cardsStats.draft_cards || 0,
-          featuredCards: cardsStats.featured_cards || 0,
-          totalReports:
-            (reportsPublished.total || 0) + (reportsDraft.total || 0),
-          publishedReports: reportsPublished.total || 0,
-          draftReports: reportsDraft.total || 0,
-        });
-      } catch (err) {
-        console.error("Failed to fetch stats:", err);
-      }
-    };
-
     fetchStats();
   }, []);
 
@@ -92,7 +96,7 @@ const Dashboard = () => {
           <div>
             <Link
               to="/"
-              className="font-playfair text-lg sm:text-xl text-white"
+              className="font-playfair text-lg sm:text-xl text-white hover:text-crimson transition-colors"
             >
               Replace<span className="text-crimson">able</span>.ai
             </Link>
@@ -187,13 +191,29 @@ const Dashboard = () => {
       <main className="flex-1 p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
-          <h1 className="font-playfair text-2xl sm:text-3xl mb-2 text-black">
-            Dashboard Overview
-          </h1>
-          <p className="font-crimson text-base sm:text-lg text-gray-600">
-            Welcome back, {user?.username}. Here's what's happening with your
-            content.
-          </p>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="font-playfair text-2xl sm:text-3xl mb-2 text-black">
+                Dashboard Overview
+              </h1>
+              <p className="font-crimson text-base sm:text-lg text-gray-600">
+                Welcome back, {user?.username}. Here's what's happening with
+                your content.
+              </p>
+            </div>
+            <button
+              onClick={fetchStats}
+              disabled={refreshing}
+              className="flex items-center gap-2 px-4 py-2 bg-crimson text-white hover:bg-crimson/90 transition-colors disabled:opacity-50"
+              title="Refresh data"
+            >
+              <RefreshCw
+                size={16}
+                className={refreshing ? "animate-spin" : ""}
+              />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+          </div>
         </div>
 
         {/* Stats Grid */}

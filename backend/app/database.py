@@ -65,6 +65,12 @@ async def create_indexes():
         IndexModel([("display_order", ASCENDING)]),
         IndexModel([("created_at", DESCENDING)])
     ])
+    
+    # Subscriptions collection indexes
+    await database.subscriptions.create_indexes([
+        IndexModel([("email", ASCENDING)], unique=True),
+        IndexModel([("created_at", DESCENDING)])
+    ])
 
 
 def get_database():

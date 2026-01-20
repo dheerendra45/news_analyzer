@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { intelligenceCardsAPI } from "../api/intelligenceCards";
 import { ChevronLeft, ChevronRight, Check } from "lucide-react";
+import toast from "react-hot-toast";
+import axios from "../api/axios";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -15,6 +17,14 @@ const Landing = () => {
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef(null);
   const [isHovering, setIsHovering] = useState(false);
+  const [isManualScrolling, setIsManualScrolling] = useState(false);
+  const [subscribeForm, setSubscribeForm] = useState({
+    email: "",
+    role: "",
+    interest: "All Intelligence Briefings",
+  });
+  const [subscribing, setSubscribing] = useState(false);
+  const [subscribed, setSubscribed] = useState(false);
 
   // Animated counters state
   const [animatedStats, setAnimatedStats] = useState({
@@ -71,14 +81,65 @@ const Landing = () => {
   };
 
   const scrollLeft = () => {
+    console.log("scrollLeft clicked", scrollRef.current);
     if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: -400, behavior: "smooth" });
+      setIsManualScrolling(true);
+      const container = scrollRef.current;
+      const scrollAmount = 400;
+      container.scrollTo({
+        left: container.scrollLeft - scrollAmount,
+        behavior: "smooth",
+      });
+      // Resume auto-scroll after 2 seconds
+      setTimeout(() => setIsManualScrolling(false), 2000);
     }
   };
 
   const scrollRight = () => {
+    console.log("scrollRight clicked", scrollRef.current);
     if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: 400, behavior: "smooth" });
+      setIsManualScrolling(true);
+      const container = scrollRef.current;
+      const scrollAmount = 400;
+      container.scrollTo({
+        left: container.scrollLeft + scrollAmount,
+        behavior: "smooth",
+      });
+      // Resume auto-scroll after 2 seconds
+      setTimeout(() => setIsManualScrolling(false), 2000);
+    }
+  };
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault();
+
+    if (!subscribeForm.email || !subscribeForm.role) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setSubscribing(true);
+    try {
+      await axios.post("/subscriptions", {
+        email: subscribeForm.email,
+        role: subscribeForm.role,
+        interest: subscribeForm.interest,
+      });
+
+      setSubscribed(true);
+      setSubscribeForm({
+        email: "",
+        role: "",
+        interest: "All Intelligence Briefings",
+      });
+    } catch (error) {
+      console.error("Subscribe error:", error);
+      toast.error(
+        error.response?.data?.detail ||
+          "Failed to subscribe. Please try again.",
+      );
+    } finally {
+      setSubscribing(false);
     }
   };
 
@@ -89,26 +150,14 @@ const Landing = () => {
     const newsScroll = scrollRef.current;
     let animationId;
 
-    const autoScroll = () => {
-      if (!isHovering && newsScroll) {
-        const maxScroll = newsScroll.scrollWidth - newsScroll.clientWidth;
-        if (newsScroll.scrollLeft >= maxScroll - 1) {
-          // Reset to beginning for infinite loop
-          newsScroll.scrollLeft = 0;
-        } else {
-          newsScroll.scrollLeft += 1;
-        }
-      }
-      animationId = requestAnimationFrame(autoScroll);
-    };
-
     // Start slower auto-scroll using requestAnimationFrame with throttle
     let lastTime = 0;
     const scrollSpeed = 30; // Lower = faster
 
     const throttledScroll = (timestamp) => {
       if (timestamp - lastTime >= scrollSpeed) {
-        if (!isHovering && newsScroll) {
+        // Only auto-scroll if not hovering AND not manually scrolling
+        if (!isHovering && !isManualScrolling && newsScroll) {
           const maxScroll = newsScroll.scrollWidth - newsScroll.clientWidth;
           if (newsScroll.scrollLeft >= maxScroll - 1) {
             newsScroll.scrollLeft = 0;
@@ -128,7 +177,7 @@ const Landing = () => {
         cancelAnimationFrame(animationId);
       }
     };
-  }, [loading, isHovering]);
+  }, [loading, isHovering, isManualScrolling]);
 
   const handleCardClick = (card) => {
     if (card.report_id) {
@@ -296,10 +345,10 @@ const Landing = () => {
               </h2>
             </div>
             <div className="feed-controls">
-              <button className="feed-btn" onClick={scrollLeft}>
+              <button type="button" className="feed-btn" onClick={scrollLeft}>
                 <ChevronLeft size={20} />
               </button>
-              <button className="feed-btn" onClick={scrollRight}>
+              <button type="button" className="feed-btn" onClick={scrollRight}>
                 <ChevronRight size={20} />
               </button>
             </div>
@@ -345,9 +394,16 @@ const Landing = () => {
                             src={card.company_logo}
                             alt={card.company}
                             className="company-logo-img"
+                            onError={(e) => {
+                              e.target.style.display = "none";
+                              e.target.parentElement.textContent =
+                                card.company_icon ||
+                                card.company.charAt(0).toUpperCase();
+                            }}
                           />
                         ) : (
-                          card.company_icon
+                          card.company_icon ||
+                          card.company.charAt(0).toUpperCase()
                         )}
                       </div>
                       <span className="company-name">{card.company}</span>
@@ -709,41 +765,88 @@ const Landing = () => {
               </ul>
             </div>
 
-            <div className="subscribe-form">
-              <div className="form-group">
-                <label className="form-label">Email Address</label>
-                <input
-                  type="email"
-                  className="form-input"
-                  placeholder="you@company.com"
-                />
+            {subscribed ? (
+              <div className="subscribe-form subscribe-success">
+                <div className="success-icon">
+                  <Check size={48} />
+                </div>
+                <h3>Thank You for Subscribing!</h3>
+                <p>
+                  You're now part of our 47,000+ intelligence community. We'll
+                  send you weekly briefings with RPI-analyzed news and career
+                  insights.
+                </p>
+                <p className="success-note">
+                  Check your inbox for a welcome email with your first
+                  intelligence digest.
+                </p>
               </div>
-              <div className="form-group">
-                <label className="form-label">Current Role</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g., Product Manager"
-                />
+            ) : (
+              <div className="subscribe-form">
+                <div className="form-group">
+                  <label className="form-label">Email Address</label>
+                  <input
+                    type="email"
+                    className="form-input"
+                    placeholder="you@company.com"
+                    value={subscribeForm.email}
+                    onChange={(e) =>
+                      setSubscribeForm((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Current Role</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g., Product Manager"
+                    value={subscribeForm.role}
+                    onChange={(e) =>
+                      setSubscribeForm((prev) => ({
+                        ...prev,
+                        role: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Primary Interest</label>
+                  <select
+                    className="form-select"
+                    value={subscribeForm.interest}
+                    onChange={(e) =>
+                      setSubscribeForm((prev) => ({
+                        ...prev,
+                        interest: e.target.value,
+                      }))
+                    }
+                  >
+                    <option>All Intelligence Briefings</option>
+                    <option>Tech Industry Focus</option>
+                    <option>Finance & Banking</option>
+                    <option>Healthcare & Life Sciences</option>
+                    <option>Manufacturing & Supply Chain</option>
+                    <option>Professional Services</option>
+                  </select>
+                </div>
+                <button
+                  className="subscribe-btn"
+                  onClick={handleSubscribe}
+                  disabled={subscribing}
+                >
+                  {subscribing ? "Subscribing..." : "Subscribe to Intelligence"}
+                </button>
+                <p className="form-note">
+                  Free weekly digest • 47,000+ subscribers • Unsubscribe anytime
+                </p>
               </div>
-              <div className="form-group">
-                <label className="form-label">Primary Interest</label>
-                <select className="form-select">
-                  <option>All Intelligence Briefings</option>
-                  <option>Tech Industry Focus</option>
-                  <option>Finance & Banking</option>
-                  <option>Healthcare & Life Sciences</option>
-                  <option>Manufacturing & Supply Chain</option>
-                  <option>Professional Services</option>
-                </select>
-              </div>
-              <button className="subscribe-btn">
-                Subscribe to Intelligence
-              </button>
-              <p className="form-note">
-                Free weekly digest • 47,000+ subscribers • Unsubscribe anytime
-              </p>
-            </div>
+            )}
           </div>
         </div>
       </section>

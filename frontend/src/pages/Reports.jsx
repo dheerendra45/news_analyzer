@@ -45,7 +45,7 @@ const Reports = () => {
         (r) =>
           r.is_rich_report ||
           r.title === "The Structural Shift" ||
-          (r.hero_stats && r.hero_stats.length > 0)
+          (r.hero_stats && r.hero_stats.length > 0),
       );
 
       if (featured) {
@@ -69,7 +69,7 @@ const Reports = () => {
       console.error("Error fetching reports:", err);
       setError(
         err.response?.data?.detail ||
-          "Failed to fetch reports. Is the backend running?"
+          "Failed to fetch reports. Is the backend running?",
       );
       toast.error("Failed to fetch reports");
     } finally {
@@ -159,7 +159,7 @@ const Reports = () => {
                   </span>
                   <span className="font-inter text-xs text-mist flex items-center gap-1">
                     <Clock size={12} />
-                    {featuredReport?.reading_time || 12} min read
+                    {featuredReport?.reading_time || 8} min read
                   </span>
                 </div>
                 <h3 className="font-playfair text-2xl lg:text-3xl mb-3 group-hover:text-crimson transition-colors">

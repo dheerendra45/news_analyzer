@@ -10,7 +10,7 @@ from app.models.report import ReportStatus
 # Base schemas
 class ReportBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
-    summary: str = Field(..., min_length=1, max_length=2000)
+    summary: str = Field(..., min_length=1, max_length=10000)  # Increased limit for rich reports
 
 
 # Create schema
@@ -45,7 +45,7 @@ class ReportCreate(ReportBase):
 # Update schema
 class ReportUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=500)
-    summary: Optional[str] = Field(None, min_length=1, max_length=2000)
+    summary: Optional[str] = Field(None, min_length=1, max_length=10000)  # Increased limit for rich reports
     content: Optional[str] = None
     file_url: Optional[str] = None
     pdf_url: Optional[str] = None
