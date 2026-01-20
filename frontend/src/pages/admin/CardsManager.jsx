@@ -494,7 +494,27 @@ const CardsManager = () => {
                             : undefined
                         }
                       >
-                        {card.company_icon}
+                        {card.company_logo ? (
+                          <img
+                            src={card.company_logo}
+                            alt={card.company}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "contain",
+                              borderRadius: "inherit",
+                            }}
+                            onError={(e) => {
+                              e.target.style.display = "none";
+                              e.target.parentElement.textContent =
+                                card.company_icon ||
+                                card.company.charAt(0).toUpperCase();
+                            }}
+                          />
+                        ) : (
+                          card.company_icon ||
+                          card.company.charAt(0).toUpperCase()
+                        )}
                       </div>
                       <span>{card.company}</span>
                     </div>
