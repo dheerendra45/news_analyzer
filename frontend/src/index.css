@@ -101,7 +101,14 @@ body {
 }
 
 .btn-primary {
-  @apply bg-crimson text-white hover:bg-deep-crimson;
+  @apply text-white;
+  background: #c41e3a !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+.btn-primary:hover {
+  background: #8b1629 !important;
 }
 
 .btn-secondary {

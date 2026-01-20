@@ -222,87 +222,131 @@ Generate complete HTML document with:
 - Length: 1,200-1,800 lines of HTML
 
 ### Option B: JSON for Admin Panel (For CMS Import) ⭐ RECOMMENDED
-Generate structured JSON that can be pasted directly into the Replaceable.ai admin panel:
+Generate structured JSON that can be pasted directly into the Replaceable.ai admin panel.
+
+**CRITICAL: Use this EXACT structure - the admin panel requires these specific field names and formats:**
 
 ```json
 {
-  "report": {
-    "meta": {
-      "title": "Report title from hero headline",
-      "description": "Brief meta description",
-      "date_context": "Month YYYY or date range"
+  "title": "Main headline (e.g., Amazon's AI Pivot: 30,000 Jobs by May 2026)",
+  "summary": "2-3 sentence summary for meta/preview. Keep under 500 chars.",
+  "subtitle": "One sentence explaining WHY this matters beyond the headline",
+  "label": "Month YYYY or date context (e.g., January 2026)",
+  "tier": "tier_1",
+  "author": "Replaceable.ai Research",
+  "reading_time": 8,
+  "tags": ["AI", "Layoffs", "Tech"],
+  "status": "draft",
+
+  "hero_context": "Full 'Why This Matters' paragraph explaining context, signals, and who should pay attention. Can be multiple sentences. NO citation markers like [web:123].",
+
+  "hero_stats": [
+    {
+      "label": "AI-Cited Layoffs",
+      "value": "54,694",
+      "target": 54694,
+      "context": "Up 75% from Q1 baseline",
+      "percent": 75
     },
-    "hero": {
-      "headline": "Main headline",
-      "subtitle": "Subtitle text",
-      "why_this_matters": "Context explaining why this matters"
-    },
-    "stats_panel": [
-      {"label": "Stat label", "value": "Number/stat"},
-      // 3-6 key statistics
-    ],
-    "executive_summary": {
-      "section_title": "Executive Summary",
-      "blocks": [
-        {"title": "Section title", "body": "Content"},
-        // 3-4 summary blocks
-      ]
-    },
-    "timeline": {
-      "section_title": "Timeline",
-      "phases": [
-        {
-          "phase": "Phase 1: Current State",
-          "status": "Confirmed",
-          "description": "What's happening now"
-        },
-        // 4 phases total
-      ]
-    },
-    "rpi_analysis": {
-      "section_title": "RPI Analysis",
-      "methodology_note": "Brief explanation",
-      "primary_role": {
-        "role_title": "Job title",
-        "experience_band": "Level/experience",
-        "summary": {
-          "rpi_score": 24.6,
-          "classification": "Risk level",
-          "trend": "Direction",
-          "narrative": "Explanation",
-          "key_insight": "Main takeaway"
-        },
-        "tasks": [
-          {
-            "id": 1,
-            "name": "Task name",
-            "time_share_pct": 25,
-            "aps": 55,
-            "hrf": 45,
-            "rpi_contribution_pct": 7.5,
-            "commentary": "Task explanation"
-          },
-          // 6-10 tasks
-        ]
-      }
-    },
-    "guidance": {
-      "section_title": "Strategic Guidance",
-      "audiences": [
-        {
-          "audience": "Target audience",
-          "actions": ["Action 1", "Action 2", ...]
-        }
-      ]
-    },
-    "sources": [
-      {"title": "Source title", "url": "URL", "date": "Date"},
-      // 6+ sources
-    ],
-    "footer": {
-      "disclaimer": "Standard disclaimer",
-      "last_updated": "Month YYYY"
+    {
+      "label": "Companies Affected",
+      "value": "127",
+      "target": 127,
+      "context": "Across 12 sectors",
+      "percent": 0
     }
-  }
+  ],
+
+  "exec_summary": {
+    "paragraphs": [
+      "**The Story**: Full paragraph about what happened. Include key facts, numbers, and context. This should be 3-5 sentences.",
+      "**The Strategy**: Full paragraph about why the company is doing this. Include executive quotes if available.",
+      "**The Signal**: Full paragraph about what this means for the industry. What trends does this confirm or accelerate?"
+    ],
+    "stats": [
+      {"value": "30,000", "label": "Jobs affected"},
+      {"value": "18%", "label": "Workforce reduction"}
+    ]
+  },
+
+  "timeline": [
+    {
+      "date": "Phase 1: Current State (Q4 2025)",
+      "event": "Confirmed",
+      "impact": "What has been officially announced. Include specific numbers and dates."
+    },
+    {
+      "date": "Phase 2: Near-Term (0-6 months)",
+      "event": "Projected",
+      "impact": "Expected implementation steps based on announced plans."
+    },
+    {
+      "date": "Phase 3: Medium-Term (6-18 months)",
+      "event": "Projected",
+      "impact": "Anticipated transformation based on industry patterns."
+    },
+    {
+      "date": "Phase 4: Long-Term (18+ months)",
+      "event": "Projected",
+      "impact": "Projected end state based on stated company objectives."
+    }
+  ],
+
+  "rpi_analysis": {
+    "role": "Software Developer (Mid-Career)",
+    "workers": "~45,000 in similar roles at this company",
+    "salary": "$95,000-$145,000",
+    "score": 48,
+    "tasks": [
+      {"name": "Feature Coding & Implementation", "aps": 70},
+      {"name": "Bug Fixing & Maintenance", "aps": 65},
+      {"name": "Requirements Analysis", "aps": 30},
+      {"name": "Unit & Integration Testing", "aps": 80},
+      {"name": "Code Review & Mentoring", "aps": 45},
+      {"name": "Client Communication", "aps": 25}
+    ]
+  },
+
+  "guidance": [
+    {
+      "title": "For Workers in Affected Roles",
+      "items": [
+        "Specific actionable recommendation 1 with context",
+        "Specific actionable recommendation 2 with context",
+        "Specific actionable recommendation 3 with context",
+        "Specific actionable recommendation 4 with context"
+      ]
+    },
+    {
+      "title": "For Adjacent Professionals",
+      "items": [
+        "Specific actionable recommendation 1 for related roles",
+        "Specific actionable recommendation 2 for related roles",
+        "Specific actionable recommendation 3 for related roles"
+      ]
+    }
+  ],
+
+  "sources": [
+    {"title": "Primary source article title", "url": "https://...", "date": "January 15, 2026"},
+    {"title": "Company announcement or SEC filing", "url": "https://...", "date": "January 14, 2026"},
+    {"title": "Industry analysis report", "url": "https://...", "date": "January 10, 2026"},
+    {"title": "Executive interview or earnings call", "url": "https://...", "date": "January 12, 2026"},
+    {"title": "Research report (McKinsey, Gartner, etc.)", "url": "https://...", "date": "December 2025"},
+    {"title": "Additional credible source", "url": "https://...", "date": "January 2026"}
+  ]
 }
+```
+
+### IMPORTANT FORMAT RULES:
+
+1. **NO `report` wrapper** - Start directly with `{` and the fields
+2. **NO citation markers** - Remove ALL `[web:123]` style references from text
+3. **`hero_stats`** - Each stat MUST have: `label`, `value` (string), `target` (number for animation), `context`, `percent`
+4. **`exec_summary`** - Use `paragraphs` array (not `blocks`), prefix with **bold title**:
+5. **`timeline`** - Use `date`, `event`, `impact` (not `phase`, `status`, `description`)
+6. **`rpi_analysis`** - Use flat structure with `role`, `workers`, `salary`, `score`, `tasks: [{name, aps}]`
+7. **`guidance`** - Use `[{title, items}]` format (not nested `audiences`)
+8. **All text fields** - Can contain full paragraphs with multiple sentences
+9. **Remove all comments** - JSON doesn't allow `//` comments
 ````

@@ -306,7 +306,7 @@ const CardsManager = () => {
   };
 
   return (
-    <div className="cards-manager">
+    <div className="cards-manager" style={{ paddingBottom: "40px" }}>
       <div className="cards-manager-header">
         <div className="header-left">
           <h1>Intelligence Cards Manager</h1>
@@ -315,7 +315,23 @@ const CardsManager = () => {
             archive pages.
           </p>
         </div>
-        <button className="btn-primary" onClick={handleNewCard}>
+        <button
+          className="btn-primary"
+          onClick={handleNewCard}
+          style={{
+            background: "#c41e3a",
+            color: "#ffffff",
+            fontWeight: "600",
+            padding: "12px 24px",
+            borderRadius: "6px",
+            boxShadow: "0 2px 4px rgba(196, 30, 58, 0.2)",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
           <Plus size={18} />
           New Card
         </button>

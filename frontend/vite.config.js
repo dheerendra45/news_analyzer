@@ -16,6 +16,7 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+    historyApiFallback: true,
   },
   preview: {
     port: 5173,

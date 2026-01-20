@@ -62,11 +62,23 @@ const AppRoutes = () => {
               <Dashboard />
             </ProtectedRoute>
           }
-        >
-          <Route index element={null} />
-          <Route path="cards" element={<CardsManager />} />
-          <Route path="reports" element={<ReportsManager />} />
-        </Route>
+        />
+        <Route
+          path="/admin/cards"
+          element={
+            <ProtectedRoute adminOnly>
+              <CardsManager />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/reports"
+          element={
+            <ProtectedRoute adminOnly>
+              <ReportsManager />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Catch-all 404 - Redirect to home */}
         <Route path="*" element={<Landing />} />

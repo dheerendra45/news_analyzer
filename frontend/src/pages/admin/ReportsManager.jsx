@@ -817,10 +817,10 @@ const ReportsManager = () => {
   };
 
   return (
-    <div>
+    <div className="pb-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
-        <div>
+      <div className="mb-6 sm:mb-8">
+        <div className="flex-1 min-w-0 mb-4">
           <h1 className="font-playfair text-2xl sm:text-3xl mb-1 sm:mb-2 text-black">
             Reports Manager
           </h1>
@@ -828,16 +828,9 @@ const ReportsManager = () => {
             Create and manage research reports
           </p>
         </div>
-        <button
-          onClick={openCreateModal}
-          className="btn btn-primary w-full sm:w-auto justify-center"
-        >
-          <Plus size={16} />
-          Create Report
-        </button>
       </div>
 
-      {/* Filters */}
+      {/* Search & Create Button Section */}
       <div className="bg-white border border-platinum p-3 sm:p-4 mb-4 sm:mb-6">
         <div className="flex flex-col gap-3 sm:gap-4">
           <form
@@ -854,14 +847,26 @@ const ReportsManager = () => {
                 placeholder="Search reports..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="form-input pl-10 w-full"
+                className="w-full px-4 py-2.5 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-crimson focus:border-transparent"
               />
             </div>
             <button
               type="submit"
-              className="btn btn-primary w-full sm:w-auto justify-center"
+              className="px-6 py-2.5 bg-gray-800 text-white rounded-md hover:bg-gray-900 transition-colors font-medium whitespace-nowrap"
             >
-              Search
+              SEARCH
+            </button>
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="flex items-center justify-center gap-2 px-6 py-2.5 text-white rounded-md transition-colors font-semibold whitespace-nowrap"
+              style={{
+                background: "#c41e3a",
+                boxShadow: "0 2px 4px rgba(196, 30, 58, 0.2)",
+              }}
+            >
+              <Plus size={18} />
+              CREATE REPORT
             </button>
           </form>
 
