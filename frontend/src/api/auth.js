@@ -58,7 +58,15 @@ export const authAPI = {
         "Content-Type": "multipart/form-data",
       },
     });
-    return response.data;
+    // Convert relative URL to absolute URL
+    const result = response.data;
+    if (result.url && result.url.startsWith("/uploads")) {
+      const apiBaseUrl =
+        import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+      const backendUrl = apiBaseUrl.replace("/api", "");
+      result.url = `${backendUrl}${result.url}`;
+    }
+    return result;
   },
 
   // Upload PDF
@@ -70,7 +78,15 @@ export const authAPI = {
         "Content-Type": "multipart/form-data",
       },
     });
-    return response.data;
+    // Convert relative URL to absolute URL
+    const result = response.data;
+    if (result.url && result.url.startsWith("/uploads")) {
+      const apiBaseUrl =
+        import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+      const backendUrl = apiBaseUrl.replace("/api", "");
+      result.url = `${backendUrl}${result.url}`;
+    }
+    return result;
   },
 };
 

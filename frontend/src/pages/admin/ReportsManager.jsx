@@ -198,10 +198,21 @@ const ReportsManager = () => {
       const extractedSummary = metaDescMatch ? metaDescMatch[1] : "";
 
       // Update form data with extracted info
+      // Ensure title and summary are NEVER empty (required by backend)
+      const finalTitle =
+        extractedTitle.trim() ||
+        prev.title ||
+        file.name.replace(/\.(html|htm)$/i, "") ||
+        "Untitled HTML Report";
+      const finalSummary =
+        extractedSummary.trim() ||
+        prev.summary ||
+        "HTML Report - Full document rendering";
+
       setFormData((prev) => ({
         ...prev,
-        title: extractedTitle.trim() || prev.title,
-        summary: extractedSummary.trim() || prev.summary || "HTML Report",
+        title: finalTitle,
+        summary: finalSummary,
         content: "", // Clear content when using html_content
       }));
 
@@ -1341,6 +1352,69 @@ const ReportsManager = () => {
                       />
                     </div>
                   </label>
+
+                  {/* Show Title and Summary fields when HTML is uploaded so admin can verify/edit them */}
+                  {htmlContent && (
+                    <div className="mt-4 space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-blue-900 mb-1">
+                          Title (Required) *
+                        </label>
+                        <input
+                          type="text"
+                          name="title"
+                          value={formData.title}
+                          onChange={handleInputChange}
+                          required
+                          className="w-full px-3 py-2 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Report title"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-blue-900 mb-1">
+                          Summary (Required) *
+                        </label>
+                        <textarea
+                          name="summary"
+                          value={formData.summary}
+                          onChange={handleInputChange}
+                          required
+                          className="w-full px-3 py-2 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          rows={2}
+                          placeholder="Brief summary"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium text-blue-900 mb-1">
+                            Author
+                          </label>
+                          <input
+                            type="text"
+                            name="author"
+                            value={formData.author}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Author name"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium text-blue-900 mb-1">
+                            Reading Time (min)
+                          </label>
+                          <input
+                            type="number"
+                            name="reading_time"
+                            value={formData.reading_time}
+                            onChange={handleInputChange}
+                            min="1"
+                            className="w-full px-3 py-2 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="e.g., 8"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
