@@ -3,9 +3,12 @@ FastAPI Main Application
 News Analyzer Full Stack Application
 """
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from pydantic import ValidationError
 import os
 
 from app.config import settings
@@ -78,6 +81,50 @@ app.add_middleware(
 # Mount static files for uploads
 if os.path.exists(settings.upload_dir):
     app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
+
+# Custom exception handlers
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """
+    Convert Pydantic validation errors to user-friendly messages
+    """
+    errors = exc.errors()
+    
+    # Extract the first error for a simpler message
+    if errors:
+        first_error = errors[0]
+        field_path = " -> ".join(str(loc) for loc in first_error["loc"] if loc != "body")
+        error_type = first_error["type"]
+        error_msg = first_error["msg"]
+        
+        # Create user-friendly message based on error type
+        if error_type == "string_too_long":
+            max_length = first_error.get("ctx", {}).get("max_length", "allowed")
+            friendly_msg = f"Field '{field_path}' is too long. Maximum length is {max_length} characters."
+        elif error_type == "string_too_short":
+            min_length = first_error.get("ctx", {}).get("min_length", "required")
+            friendly_msg = f"Field '{field_path}' is too short. Minimum length is {min_length} characters."
+        elif error_type == "missing":
+            friendly_msg = f"Field '{field_path}' is required but was not provided."
+        elif error_type == "value_error":
+            friendly_msg = f"Invalid value for field '{field_path}': {error_msg}"
+        else:
+            friendly_msg = f"Validation error for '{field_path}': {error_msg}"
+        
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={
+                "detail": friendly_msg,
+                "field": field_path,
+                "error_type": error_type
+            }
+        )
+    
+    # Fallback for multiple errors
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": "Validation error occurred. Please check your input data."}
+    )
 
 # Include routers
 app.include_router(auth_router, prefix="/api")

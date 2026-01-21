@@ -171,7 +171,12 @@ const ReportsManager = () => {
 
     try {
       const text = await file.text();
+
+      // Store the raw HTML content
       setHtmlContent(text);
+
+      // Set upload mode to html so it uses html_content on save
+      setUploadMode("html");
 
       // Try to extract title from HTML
       const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i);
@@ -182,14 +187,27 @@ const ReportsManager = () => {
           ? h1Match[1]
           : "";
 
-      if (extractedTitle) {
-        setFormData((prev) => ({ ...prev, title: extractedTitle.trim() }));
-      }
+      // Try to extract meta description for summary
+      const metaDescMatch =
+        text.match(
+          /<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i,
+        ) ||
+        text.match(
+          /<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i,
+        );
+      const extractedSummary = metaDescMatch ? metaDescMatch[1] : "";
 
-      // Set the HTML content as the report content
-      setFormData((prev) => ({ ...prev, content: text }));
+      // Update form data with extracted info
+      setFormData((prev) => ({
+        ...prev,
+        title: extractedTitle.trim() || prev.title,
+        summary: extractedSummary.trim() || prev.summary || "HTML Report",
+        content: "", // Clear content when using html_content
+      }));
 
-      toast.success("HTML file loaded successfully!");
+      toast.success(
+        "HTML file loaded successfully! The full HTML will be rendered as-is.",
+      );
     } catch (err) {
       toast.error("Failed to read HTML file");
       console.error(err);
@@ -305,9 +323,14 @@ const ReportsManager = () => {
       const convertGuidance = (guidanceData) => {
         if (!guidanceData) return [];
 
-        // If it's already an array of {title, items}, return as is
+        // If it's already an array of {title, items}, clean citations and return
         if (Array.isArray(guidanceData) && guidanceData[0]?.items) {
-          return guidanceData;
+          return guidanceData.map((group) => ({
+            title: cleanCitations(String(group.title || "")),
+            items: (group.items || []).map((item) =>
+              cleanCitations(String(item || "")),
+            ),
+          }));
         }
 
         // If it's an array of {icon, title, recommendation}, convert to grouped format
@@ -353,26 +376,58 @@ const ReportsManager = () => {
         }));
       };
 
-      // Determine hero_stats
+      // Determine hero_stats - convert to proper format
       let heroStats = [];
       if (parsed.hero_stats && Array.isArray(parsed.hero_stats)) {
-        heroStats = parsed.hero_stats;
+        // Ensure each stat has all required fields and clean any citations
+        heroStats = parsed.hero_stats.map((stat) => ({
+          label: cleanCitations(String(stat.label || "")),
+          value: String(stat.value || ""),
+          target:
+            typeof stat.target === "number"
+              ? stat.target
+              : parseInt(
+                  String(stat.value || "0").replace(/[^0-9-]/g, "") || "0",
+                ),
+          context: cleanCitations(String(stat.context || "")),
+          percent: typeof stat.percent === "number" ? stat.percent : 0,
+        }));
       } else if (parsed.stats_panel && Array.isArray(parsed.stats_panel)) {
         heroStats = convertStatsPanel(parsed.stats_panel);
       }
 
-      // Determine exec_summary
+      // Determine exec_summary - clean citations and ensure proper format
       let execSummary = {};
       if (parsed.exec_summary) {
-        execSummary = parsed.exec_summary;
+        // Clean citations from paragraphs if they exist
+        if (
+          parsed.exec_summary.paragraphs &&
+          Array.isArray(parsed.exec_summary.paragraphs)
+        ) {
+          execSummary = {
+            paragraphs: parsed.exec_summary.paragraphs.map((p) =>
+              cleanCitations(String(p || "")),
+            ),
+            stats: (parsed.exec_summary.stats || []).map((s) => ({
+              value: String(s.value || ""),
+              label: cleanCitations(String(s.label || "")),
+            })),
+          };
+        } else {
+          execSummary = convertExecSummary(parsed.exec_summary);
+        }
       } else if (parsed.executive_summary) {
         execSummary = convertExecSummary(parsed.executive_summary);
       }
 
-      // Determine timeline
+      // Determine timeline - clean citations from impact text
       let timeline = [];
       if (parsed.timeline) {
-        timeline = convertTimeline(parsed.timeline);
+        timeline = convertTimeline(parsed.timeline).map((item) => ({
+          date: cleanCitations(item.date),
+          event: cleanCitations(item.event),
+          impact: cleanCitations(item.impact),
+        }));
       }
 
       // Determine guidance
@@ -422,7 +477,31 @@ const ReportsManager = () => {
         exec_summary: safeStringify(execSummary, {}),
         metrics: safeStringify(parsed.metrics || [], []),
         data_table: safeStringify(parsed.data_table || [], []),
-        rpi_analysis: safeStringify(parsed.rpi_analysis || {}, {}),
+        rpi_analysis: safeStringify(
+          parsed.rpi_analysis
+            ? {
+                role: cleanCitations(String(parsed.rpi_analysis.role || "")),
+                workers: cleanCitations(
+                  String(parsed.rpi_analysis.workers || ""),
+                ),
+                salary: cleanCitations(
+                  String(parsed.rpi_analysis.salary || ""),
+                ),
+                score:
+                  typeof parsed.rpi_analysis.score === "number"
+                    ? parsed.rpi_analysis.score
+                    : parseInt(parsed.rpi_analysis.score || "0"),
+                tasks: (parsed.rpi_analysis.tasks || []).map((task) => ({
+                  name: cleanCitations(String(task.name || "")),
+                  aps:
+                    typeof task.aps === "number"
+                      ? task.aps
+                      : parseInt(task.aps || "0"),
+                })),
+              }
+            : {},
+          {},
+        ),
         risk_buckets: safeStringify(parsed.risk_buckets || [], []),
         timeline: safeStringify(timeline, []),
         guidance: safeStringify(guidance, []),
@@ -431,6 +510,7 @@ const ReportsManager = () => {
 
       toast.success("Report content parsed and loaded successfully!");
       setPasteContent(""); // Clear the paste area
+      setUploadMode("manual"); // Switch to form mode to show parsed fields
     } catch (err) {
       toast.error(
         "Invalid JSON format. Please check your content and try again.",
