@@ -424,6 +424,47 @@ const ReportDetail = () => {
       };
     }
 
+    // Normalize tasks - handle both 0-1 and 0-100 APS scale
+    if (rpiData.tasks && rpiData.tasks.length > 0) {
+      const normalizedTasks = rpiData.tasks.map((task) => {
+        let aps =
+          typeof task.aps === "number" ? task.aps : parseFloat(task.aps || "0");
+        let hrf =
+          typeof task.hrf === "number" ? task.hrf : parseFloat(task.hrf || "0");
+
+        // If APS > 1, it's on 0-100 scale, normalize to 0-1
+        if (aps > 1) aps = aps / 100;
+        if (hrf > 1) hrf = hrf / 100;
+
+        // Extract weight from task name if it contains percentage like "Feature Coding (30%)"
+        let weight = task.weight || "";
+        if (!weight) {
+          const weightMatch = (task.name || "").match(/\((\d+%)\)/);
+          if (weightMatch) weight = weightMatch[1];
+        }
+
+        // Clean task name - remove percentage suffix if it was embedded
+        let name = task.name || "";
+        name = name.replace(/\s*\(\d+%\)\s*$/, "");
+
+        return {
+          name,
+          weight,
+          aps,
+          hrf,
+          level:
+            task.level ||
+            (aps >= 0.7 ? "high" : aps >= 0.4 ? "moderate" : "low"),
+          commentary: task.commentary || "",
+        };
+      });
+
+      return {
+        ...rpiData,
+        tasks: normalizedTasks,
+      };
+    }
+
     // Old format - return as is
     return rpiData;
   };
@@ -1147,38 +1188,83 @@ const ReportDetail = () => {
 
           {/* Methodology Panel - Only show if we have RPI analysis */}
           {(report.rpi_analysis || report.rpiAnalysis) && (
-            <div className="bg-black text-white p-6 sm:p-8 lg:p-12 relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal via-gold to-crimson"></div>
-              <div className="flex items-center gap-3 mb-4 sm:mb-5">
-                <BookOpen className="text-crimson" size={20} />
-                <span className="font-playfair text-xl sm:text-2xl">
-                  How We Measure Automation Risk
-                </span>
+            /* Context Box - Custom callout block */
+            <>
+              {(() => {
+                const ctxBox =
+                  report.context_box ||
+                  (report.extra_fields && report.extra_fields.context_box);
+                if (!ctxBox) return null;
+                return (
+                  <div className="bg-gradient-to-r from-crimson/5 to-teal/5 border border-crimson/20 p-6 sm:p-8 lg:p-10 mb-10 sm:mb-16 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-crimson via-gold to-teal"></div>
+                    {ctxBox.title && (
+                      <h3 className="font-playfair text-xl sm:text-2xl mb-3 sm:mb-4">
+                        {ctxBox.title}
+                      </h3>
+                    )}
+                    {ctxBox.body && (
+                      <p className="font-crimson text-base sm:text-lg text-charcoal leading-relaxed mb-4">
+                        {ctxBox.body}
+                      </p>
+                    )}
+                    {ctxBox.items && Array.isArray(ctxBox.items) && (
+                      <ul className="space-y-2">
+                        {ctxBox.items.map((item, idx) => (
+                          <li
+                            key={idx}
+                            className="font-crimson text-base text-charcoal pl-5 relative leading-relaxed"
+                          >
+                            <span className="absolute left-0 top-2.5 w-2 h-2 bg-crimson"></span>
+                            {typeof item === "string"
+                              ? item
+                              : item.text || item.label || ""}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {ctxBox.note && (
+                      <p className="font-inter text-xs text-mist mt-4 italic">
+                        {ctxBox.note}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+
+              <div className="bg-black text-white p-6 sm:p-8 lg:p-12 relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal via-gold to-crimson"></div>
+                <div className="flex items-center gap-3 mb-4 sm:mb-5">
+                  <BookOpen className="text-crimson" size={20} />
+                  <span className="font-playfair text-xl sm:text-2xl">
+                    How We Measure Automation Risk
+                  </span>
+                </div>
+                <p className="font-inter text-sm text-titanium leading-relaxed mb-4 sm:mb-6">
+                  This briefing applies Replaceable.ai's proprietary{" "}
+                  <strong className="text-white">
+                    Replaceability Potential Index (RPI™)
+                  </strong>{" "}
+                  methodology. Unlike simple "will AI take my job" predictions,
+                  RPI breaks down each role into constituent tasks, scoring each
+                  on Automation Probability (APS) and Human Resilience Factors
+                  (HRF). The result is a nuanced view of which specific
+                  activities face displacement—and which remain durably human.
+                </p>
+                <div className="flex gap-0.5 h-2 rounded overflow-hidden mb-3">
+                  <div className="flex-1 bg-teal hover:scale-y-150 transition-transform cursor-pointer"></div>
+                  <div className="flex-1 bg-slate hover:scale-y-150 transition-transform cursor-pointer"></div>
+                  <div className="flex-1 bg-gold hover:scale-y-150 transition-transform cursor-pointer"></div>
+                  <div className="flex-1 bg-crimson hover:scale-y-150 transition-transform cursor-pointer"></div>
+                  <div className="flex-1 bg-deep-crimson hover:scale-y-150 transition-transform cursor-pointer"></div>
+                </div>
+                <div className="flex justify-between font-inter text-[8px] sm:text-[9px] text-mist uppercase tracking-wide">
+                  <span>Low Risk (0-20)</span>
+                  <span>Moderate (40-60)</span>
+                  <span>Critical (80-100)</span>
+                </div>
               </div>
-              <p className="font-inter text-sm text-titanium leading-relaxed mb-4 sm:mb-6">
-                This briefing applies Replaceable.ai's proprietary{" "}
-                <strong className="text-white">
-                  Replaceability Potential Index (RPI™)
-                </strong>{" "}
-                methodology. Unlike simple "will AI take my job" predictions,
-                RPI breaks down each role into constituent tasks, scoring each
-                on Automation Probability (APS) and Human Resilience Factors
-                (HRF). The result is a nuanced view of which specific activities
-                face displacement—and which remain durably human.
-              </p>
-              <div className="flex gap-0.5 h-2 rounded overflow-hidden mb-3">
-                <div className="flex-1 bg-teal hover:scale-y-150 transition-transform cursor-pointer"></div>
-                <div className="flex-1 bg-slate hover:scale-y-150 transition-transform cursor-pointer"></div>
-                <div className="flex-1 bg-gold hover:scale-y-150 transition-transform cursor-pointer"></div>
-                <div className="flex-1 bg-crimson hover:scale-y-150 transition-transform cursor-pointer"></div>
-                <div className="flex-1 bg-deep-crimson hover:scale-y-150 transition-transform cursor-pointer"></div>
-              </div>
-              <div className="flex justify-between font-inter text-[8px] sm:text-[9px] text-mist uppercase tracking-wide">
-                <span>Low Risk (0-20)</span>
-                <span>Moderate (40-60)</span>
-                <span>Critical (80-100)</span>
-              </div>
-            </div>
+            </>
           )}
 
           {/* PDF Download - For reports without rich data */}
@@ -1517,15 +1603,39 @@ const ReportDetail = () => {
                 "
               </span>
               <div className="relative z-10 max-w-4xl">
-                <blockquote className="font-playfair text-xl sm:text-2xl lg:text-3xl italic text-white leading-relaxed mb-4 sm:mb-6">
-                  We suspect some firms are trying to dress up layoffs as a good
-                  news story rather than bad news, such as past over-hiring. AI
-                  becomes the scapegoat for executives looking to cover for past
-                  mistakes.
-                </blockquote>
-                <cite className="font-inter text-sm text-mist not-italic">
-                  — Oxford Economics, January 2026 Research Briefing
-                </cite>
+                {(() => {
+                  const insightData =
+                    report.insight_block ||
+                    (report.extra_fields && report.extra_fields.insight_block);
+                  if (insightData && insightData.quote) {
+                    return (
+                      <>
+                        <blockquote className="font-playfair text-xl sm:text-2xl lg:text-3xl italic text-white leading-relaxed mb-4 sm:mb-6">
+                          {insightData.quote}
+                        </blockquote>
+                        <cite className="font-inter text-sm text-mist not-italic">
+                          —{" "}
+                          {insightData.attribution ||
+                            insightData.source ||
+                            "Source"}
+                        </cite>
+                      </>
+                    );
+                  }
+                  return (
+                    <>
+                      <blockquote className="font-playfair text-xl sm:text-2xl lg:text-3xl italic text-white leading-relaxed mb-4 sm:mb-6">
+                        We suspect some firms are trying to dress up layoffs as
+                        a good news story rather than bad news, such as past
+                        over-hiring. AI becomes the scapegoat for executives
+                        looking to cover for past mistakes.
+                      </blockquote>
+                      <cite className="font-inter text-sm text-mist not-italic">
+                        — Oxford Economics, January 2026 Research Briefing
+                      </cite>
+                    </>
+                  );
+                })()}
               </div>
             </div>
 

@@ -40,6 +40,17 @@ class ReportCreate(ReportBase):
     sources: Optional[List[Dict[str, Any]]] = None
     is_rich_report: bool = False
     html_content: Optional[str] = None  # Full HTML document for standalone HTML reports
+    # Flexible extra fields - accepts any additional data like context_box, insight_block, etc.
+    extra_fields: Optional[Dict[str, Any]] = None
+    # Section customization fields
+    context_label: Optional[str] = None
+    context_title: Optional[str] = None
+    context_intro: Optional[str] = None
+    metrics_label: Optional[str] = None
+    metrics_title: Optional[str] = None
+    metrics_intro: Optional[str] = None
+    context_box: Optional[Dict[str, Any]] = None
+    insight_block: Optional[Dict[str, Any]] = None
 
 
 # Update schema
@@ -71,6 +82,15 @@ class ReportUpdate(BaseModel):
     sources: Optional[List[Dict[str, Any]]] = None
     is_rich_report: Optional[bool] = None
     html_content: Optional[str] = None  # Full HTML document for standalone HTML reports
+    extra_fields: Optional[Dict[str, Any]] = None
+    context_label: Optional[str] = None
+    context_title: Optional[str] = None
+    context_intro: Optional[str] = None
+    metrics_label: Optional[str] = None
+    metrics_title: Optional[str] = None
+    metrics_intro: Optional[str] = None
+    context_box: Optional[Dict[str, Any]] = None
+    insight_block: Optional[Dict[str, Any]] = None
 
 
 # Response schemas
@@ -106,6 +126,15 @@ class ReportResponse(BaseModel):
     sources: Optional[List[Dict[str, Any]]] = None
     is_rich_report: bool = False
     html_content: Optional[str] = None  # Full HTML document for standalone HTML reports
+    extra_fields: Optional[Dict[str, Any]] = None
+    context_label: Optional[str] = None
+    context_title: Optional[str] = None
+    context_intro: Optional[str] = None
+    metrics_label: Optional[str] = None
+    metrics_title: Optional[str] = None
+    metrics_intro: Optional[str] = None
+    context_box: Optional[Dict[str, Any]] = None
+    insight_block: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True

@@ -90,6 +90,16 @@ const ReportsManager = () => {
     timeline: "[]",
     guidance: "[]",
     sources: "[]",
+    // Section customization
+    context_label: "",
+    context_title: "",
+    context_intro: "",
+    metrics_label: "",
+    metrics_title: "",
+    metrics_intro: "",
+    context_box: "null",
+    insight_block: "null",
+    extra_fields: "null",
   });
 
   const fetchReports = async () => {
@@ -147,6 +157,15 @@ const ReportsManager = () => {
       timeline: "[]",
       guidance: "[]",
       sources: "[]",
+      context_label: "",
+      context_title: "",
+      context_intro: "",
+      metrics_label: "",
+      metrics_title: "",
+      metrics_intro: "",
+      context_box: "null",
+      insight_block: "null",
+      extra_fields: "null",
     });
     setEditingReport(null);
     setUploadMode("manual");
@@ -233,8 +252,77 @@ const ReportsManager = () => {
     }
 
     try {
-      // Try to parse as JSON first
-      let parsed = JSON.parse(pasteContent);
+      // Pre-process: fix common JSON issues (smart quotes, trailing commas, unescaped chars)
+      let cleanedContent = pasteContent.trim();
+
+      // Replace smart/curly quotes with standard quotes
+      cleanedContent = cleanedContent
+        .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
+        .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'");
+
+      // Remove trailing commas before } or ]
+      cleanedContent = cleanedContent.replace(/,\s*([\]}])/g, "$1");
+
+      // Try to parse - with detailed error reporting
+      let parsed;
+      try {
+        parsed = JSON.parse(cleanedContent);
+      } catch (jsonErr) {
+        // Extract line/column info from error message
+        const posMatch = jsonErr.message.match(/position\s+(\d+)/i);
+        const lineColMatch = jsonErr.message.match(
+          /line\s+(\d+)\s+column\s+(\d+)/i,
+        );
+
+        let errorDetail = "";
+        if (lineColMatch) {
+          errorDetail = `Error at line ${lineColMatch[1]}, column ${lineColMatch[2]}.`;
+        } else if (posMatch) {
+          const pos = parseInt(posMatch[1]);
+          const lines = cleanedContent.substring(0, pos).split("\n");
+          const lineNum = lines.length;
+          const colNum = lines[lines.length - 1].length + 1;
+          const nearbyText = cleanedContent.substring(
+            Math.max(0, pos - 30),
+            Math.min(cleanedContent.length, pos + 30),
+          );
+          errorDetail = `Error at line ${lineNum}, column ${colNum}. Near: "...${nearbyText}..."`;
+        }
+
+        // Try to identify common issues
+        let hint = "";
+        if (jsonErr.message.includes("Unexpected token")) {
+          const tokenMatch = jsonErr.message.match(/Unexpected token (.)/);
+          if (tokenMatch) {
+            const badChar = tokenMatch[1];
+            if (badChar === "'")
+              hint =
+                " Hint: Use double quotes (\") instead of single quotes (').";
+            else if (badChar === "\u201C" || badChar === "\u201D")
+              hint =
+                ' Hint: Replace curly/smart quotes with straight quotes (").';
+            else
+              hint = ` Hint: Unexpected character '${badChar}'. Check for unescaped quotes or special characters.`;
+          }
+        } else if (jsonErr.message.includes("Unterminated string")) {
+          hint =
+            ' Hint: A string is missing its closing quote. Check for unescaped quotes (\\") inside text values.';
+        } else if (jsonErr.message.includes("Expected")) {
+          hint =
+            " Hint: Check for missing commas, colons, or brackets near the error position.";
+        }
+
+        toast.error(`JSON Parse Error: ${errorDetail}${hint}`, {
+          duration: 8000,
+        });
+        console.error(
+          "JSON Parse Error:",
+          jsonErr.message,
+          "\nPosition details:",
+          errorDetail,
+        );
+        return;
+      }
 
       // Check if it's a nested structure with "report" wrapper
       if (parsed.report) {
@@ -461,6 +549,88 @@ const ReportsManager = () => {
         "";
       summaryText = cleanCitations(summaryText);
 
+      // Collect extra/custom fields not in the known schema
+      const knownFields = new Set([
+        "title",
+        "subtitle",
+        "summary",
+        "content",
+        "author",
+        "tags",
+        "status",
+        "reading_time",
+        "file_url",
+        "pdf_url",
+        "cover_image_url",
+        "is_rich_report",
+        "label",
+        "tier",
+        "hero_context",
+        "hero_stats",
+        "stats_panel",
+        "exec_summary",
+        "executive_summary",
+        "metrics",
+        "data_table",
+        "rpi_analysis",
+        "risk_buckets",
+        "timeline",
+        "guidance",
+        "sources",
+        "html_content",
+        "report",
+        "meta",
+        "hero",
+        "context_label",
+        "context_title",
+        "context_intro",
+        "metrics_label",
+        "metrics_title",
+        "metrics_intro",
+        "context_box",
+        "insight_block",
+      ]);
+      const extraFields = {};
+      Object.keys(parsed).forEach((key) => {
+        if (!knownFields.has(key)) {
+          extraFields[key] = parsed[key];
+        }
+      });
+
+      // Normalize metrics: handle both {label, value, change, changeType, context} and {title, value, change, trend, description}
+      let metricsData = parsed.metrics || [];
+      if (Array.isArray(metricsData)) {
+        metricsData = metricsData.map((m) => ({
+          label: cleanCitations(String(m.label || m.title || "")),
+          value: String(m.value || ""),
+          change: cleanCitations(String(m.change || "")),
+          changeType:
+            m.changeType ||
+            (m.trend === "up"
+              ? "negative"
+              : m.trend === "down"
+                ? "positive"
+                : "neutral"),
+          context: cleanCitations(String(m.context || m.description || "")),
+        }));
+      }
+
+      // Normalize risk_buckets: handle both {type, number, title, criteria, items} and {severity, label, items}
+      let riskBuckets = parsed.risk_buckets || [];
+      if (Array.isArray(riskBuckets)) {
+        riskBuckets = riskBuckets.map((b, idx) => ({
+          type: b.type || b.severity || "critical",
+          number: b.number || String(idx + 1).padStart(2, "0"),
+          title: cleanCitations(String(b.title || b.label || "")),
+          criteria: cleanCitations(String(b.criteria || "")),
+          items: (b.items || []).map((item) =>
+            typeof item === "string"
+              ? cleanCitations(item)
+              : cleanCitations(String(item.name || item.text || item || "")),
+          ),
+        }));
+      }
+
       // Update form data with parsed content
       setFormData({
         title:
@@ -486,14 +656,24 @@ const ReportsManager = () => {
         ),
         hero_stats: safeStringify(heroStats, []),
         exec_summary: safeStringify(execSummary, {}),
-        metrics: safeStringify(parsed.metrics || [], []),
+        metrics: safeStringify(metricsData, []),
         data_table: safeStringify(parsed.data_table || [], []),
         rpi_analysis: safeStringify(
           parsed.rpi_analysis
             ? {
-                role: cleanCitations(String(parsed.rpi_analysis.role || "")),
+                role: cleanCitations(
+                  String(
+                    parsed.rpi_analysis.role ||
+                      parsed.rpi_analysis.primary_role?.role_title ||
+                      "",
+                  ),
+                ),
                 workers: cleanCitations(
-                  String(parsed.rpi_analysis.workers || ""),
+                  String(
+                    parsed.rpi_analysis.workers ||
+                      parsed.rpi_analysis.primary_role?.experience_band ||
+                      "",
+                  ),
                 ),
                 salary: cleanCitations(
                   String(parsed.rpi_analysis.salary || ""),
@@ -501,32 +681,83 @@ const ReportsManager = () => {
                 score:
                   typeof parsed.rpi_analysis.score === "number"
                     ? parsed.rpi_analysis.score
-                    : parseInt(parsed.rpi_analysis.score || "0"),
-                tasks: (parsed.rpi_analysis.tasks || []).map((task) => ({
+                    : parsed.rpi_analysis.primary_role?.summary?.rpi_score ||
+                      parseInt(parsed.rpi_analysis.score || "0"),
+                tasks: (
+                  parsed.rpi_analysis.tasks ||
+                  parsed.rpi_analysis.primary_role?.tasks ||
+                  []
+                ).map((task) => ({
                   name: cleanCitations(String(task.name || "")),
+                  weight:
+                    task.weight ||
+                    (task.time_share_pct ? `${task.time_share_pct}%` : ""),
                   aps:
                     typeof task.aps === "number"
                       ? task.aps
-                      : parseInt(task.aps || "0"),
+                      : parseFloat(task.aps || "0"),
+                  hrf:
+                    typeof task.hrf === "number"
+                      ? task.hrf
+                      : parseFloat(task.hrf || "0"),
+                  level:
+                    task.level ||
+                    (task.aps >= 0.7 || task.aps >= 70
+                      ? "high"
+                      : task.aps >= 0.4 || task.aps >= 40
+                        ? "moderate"
+                        : "low"),
+                  commentary: task.commentary || "",
                 })),
               }
             : {},
           {},
         ),
-        risk_buckets: safeStringify(parsed.risk_buckets || [], []),
+        risk_buckets: safeStringify(riskBuckets, []),
         timeline: safeStringify(timeline, []),
         guidance: safeStringify(guidance, []),
         sources: safeStringify(sources, []),
+        // Section customization fields
+        context_label: parsed.context_label || "",
+        context_title: parsed.context_title || "",
+        context_intro: parsed.context_intro || "",
+        metrics_label: parsed.metrics_label || "",
+        metrics_title: parsed.metrics_title || "",
+        metrics_intro: parsed.metrics_intro || "",
+        // Custom visual blocks
+        context_box: safeStringify(parsed.context_box || null, "null"),
+        insight_block: safeStringify(parsed.insight_block || null, "null"),
+        // Extra fields stored as JSON
+        extra_fields: safeStringify(
+          Object.keys(extraFields).length > 0 ? extraFields : null,
+          "null",
+        ),
       });
 
-      toast.success("Report content parsed and loaded successfully!");
+      // Show success with any extra fields detected
+      const extraCount = Object.keys(extraFields).length;
+      if (extraCount > 0) {
+        toast.success(
+          `Report parsed! ${extraCount} custom field(s) detected: ${Object.keys(extraFields).join(", ")}`,
+          { duration: 5000 },
+        );
+      } else {
+        toast.success("Report content parsed and loaded successfully!");
+      }
       setPasteContent(""); // Clear the paste area
       setUploadMode("manual"); // Switch to form mode to show parsed fields
     } catch (err) {
-      toast.error(
-        "Invalid JSON format. Please check your content and try again.",
-      );
-      console.error("Parse error:", err);
+      // Provide detailed error messages for non-JSON-parse errors (field mapping issues)
+      let errorMsg = "Failed to process report content.";
+      if (err.message) {
+        errorMsg += ` Error: ${err.message}`;
+        if (err.message.includes("Cannot read")) {
+          errorMsg +=
+            " — A required nested field is missing or has the wrong structure.";
+        }
+      }
+      toast.error(errorMsg, { duration: 8000 });
+      console.error("Parse/mapping error:", err);
     }
   };
 
@@ -566,6 +797,15 @@ const ReportsManager = () => {
       timeline: JSON.stringify(item.timeline || [], null, 2),
       guidance: JSON.stringify(item.guidance || [], null, 2),
       sources: JSON.stringify(item.sources || [], null, 2),
+      context_label: item.context_label || "",
+      context_title: item.context_title || "",
+      context_intro: item.context_intro || "",
+      metrics_label: item.metrics_label || "",
+      metrics_title: item.metrics_title || "",
+      metrics_intro: item.metrics_intro || "",
+      context_box: JSON.stringify(item.context_box || null, null, 2),
+      insight_block: JSON.stringify(item.insight_block || null, null, 2),
+      extra_fields: JSON.stringify(item.extra_fields || null, null, 2),
     });
     setShowModal(true);
   };
@@ -655,6 +895,16 @@ const ReportsManager = () => {
         sources: parseJSON(formData.sources, []),
         // Full HTML content for standalone HTML reports
         html_content: uploadMode === "html" && htmlContent ? htmlContent : null,
+        // Section customization fields
+        context_label: formData.context_label || null,
+        context_title: formData.context_title || null,
+        context_intro: formData.context_intro || null,
+        metrics_label: formData.metrics_label || null,
+        metrics_title: formData.metrics_title || null,
+        metrics_intro: formData.metrics_intro || null,
+        context_box: parseJSON(formData.context_box, null),
+        insight_block: parseJSON(formData.insight_block, null),
+        extra_fields: parseJSON(formData.extra_fields, null),
       };
 
       if (editingReport) {
@@ -1490,32 +1740,31 @@ const ReportsManager = () => {
                       value={pasteContent}
                       onChange={(e) => setPasteContent(e.target.value)}
                       className="w-full border-2 border-purple-300 rounded-lg p-3 font-mono text-xs resize-y min-h-[200px] focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
-                      placeholder={`Paste your report JSON here, for example:
+                      placeholder={`Paste your report JSON here. The parser is flexible and handles:
+• Extra fields like context_box, insight_block (auto-detected)
+• Smart/curly quotes (auto-corrected)
+• Trailing commas (auto-removed)
+• Multiple JSON formats for metrics, guidance, risk_buckets etc.
+
+Example structure:
 {
   "title": "AI Workforce Impact Report Q1 2026",
-  "subtitle": "Comprehensive analysis of AI-driven workforce changes",
-  "author": "Research Team",
+  "subtitle": "Comprehensive analysis...",
   "summary": "This report analyzes...",
-  "content": "Full report content here...",
-  "tags": ["AI", "Workforce", "Research"],
+  "author": "Research Team",
+  "tags": ["AI", "Workforce"],
   "reading_time": 15,
   "status": "published",
-  "is_rich_report": true,
-  "label": "Workforce Intelligence Briefing · January 2026",
   "tier": "tier_1",
+  "label": "Workforce Intelligence Briefing · January 2026",
   "hero_context": "Why this matters...",
-  "hero_stats": [
-    {
-      "label": "AI-Cited Layoffs",
-      "value": "54,694",
-      "target": 54694,
-      "context": "Up 75% from Q1 baseline",
-      "percent": 75
-    }
-  ],
-  "metrics": [...],
-  "timeline": [...],
-  ...and more
+  "hero_stats": [{ "label": "...", "value": "54,694", "target": 54694, "context": "...", "percent": 75 }],
+  "exec_summary": { "paragraphs": ["..."], "stats": [{ "value": "...", "label": "..." }] },
+  "metrics": [{ "label": "...", "value": "...", "change": "...", "changeType": "negative", "context": "..." }],
+  "rpi_analysis": { "role": "...", "workers": "...", "salary": "...", "score": 72, "tasks": [...] },
+  "risk_buckets": [...], "timeline": [...], "guidance": [...], "sources": [...],
+  "context_box": { "title": "...", "body": "...", "items": ["..."] },
+  "insight_block": { "quote": "...", "attribution": "..." }
 }`}
                     />
 

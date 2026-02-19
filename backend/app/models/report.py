@@ -43,7 +43,16 @@ class ReportModel:
         guidance: Optional[List[Dict[str, Any]]] = None,
         sources: Optional[List[Dict[str, Any]]] = None,
         is_rich_report: bool = False,
-        html_content: Optional[str] = None
+        html_content: Optional[str] = None,
+        extra_fields: Optional[Dict[str, Any]] = None,
+        context_label: Optional[str] = None,
+        context_title: Optional[str] = None,
+        context_intro: Optional[str] = None,
+        metrics_label: Optional[str] = None,
+        metrics_title: Optional[str] = None,
+        metrics_intro: Optional[str] = None,
+        context_box: Optional[Dict[str, Any]] = None,
+        insight_block: Optional[Dict[str, Any]] = None
     ) -> dict:
         """Create a new report document"""
         now = datetime.utcnow()
@@ -77,7 +86,16 @@ class ReportModel:
             "guidance": guidance or [],
             "sources": sources or [],
             "is_rich_report": is_rich_report,
-            "html_content": html_content
+            "html_content": html_content,
+            "extra_fields": extra_fields or {},
+            "context_label": context_label,
+            "context_title": context_title,
+            "context_intro": context_intro,
+            "metrics_label": metrics_label,
+            "metrics_title": metrics_title,
+            "metrics_intro": metrics_intro,
+            "context_box": context_box,
+            "insight_block": insight_block
         }
     
     @staticmethod
@@ -117,5 +135,14 @@ class ReportModel:
             "guidance": document.get("guidance", []),
             "sources": document.get("sources", []),
             "is_rich_report": document.get("is_rich_report", False),
-            "html_content": document.get("html_content")
+            "html_content": document.get("html_content"),
+            "extra_fields": document.get("extra_fields", {}),
+            "context_label": document.get("context_label"),
+            "context_title": document.get("context_title"),
+            "context_intro": document.get("context_intro"),
+            "metrics_label": document.get("metrics_label"),
+            "metrics_title": document.get("metrics_title"),
+            "metrics_intro": document.get("metrics_intro"),
+            "context_box": document.get("context_box"),
+            "insight_block": document.get("insight_block")
         }

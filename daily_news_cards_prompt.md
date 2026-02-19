@@ -45,6 +45,8 @@ OUTPUT AS JSON ARRAY (max 5 stories):
 
 **Paste this JSON directly into the News Manager admin panel.**
 
+**NEW: Supports both single items and arrays for bulk upload!**
+
 ---
 
 ## Quick Reference
@@ -66,8 +68,11 @@ OUTPUT AS JSON ARRAY (max 5 stories):
 ### Usage:
 
 1. Run prompt daily in Claude
-2. Copy JSON output
+2. Copy JSON output (single object or array)
 3. Open News Manager in admin panel
-4. Click "Paste JSON"
-5. Paste and click "Parse & Load"
-6. Review and publish
+4. Click "+ Create News"
+5. Switch to "Paste JSON" tab
+6. Paste and click "Parse & Load"
+   - **Single object**: Loads into form for review/editing
+   - **Array**: Bulk creates all items (max 20 at once)
+7. Review and publish

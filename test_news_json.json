@@ -1,0 +1,41 @@
+[
+  {
+    "headline": "Meta Announces AI Agents for 40% of Support",
+    "source": "Reuters",
+    "url": "https://reuters.com/tech/meta-ai-support-2026",
+    "tier": 1,
+    "summary": "Meta reveals AI agent deployment across customer support, potentially affecting 2,000 contractor positions by Q3 2026.",
+    "category": "Big Tech",
+    "key_stat": {"value": "40%", "label": "Support automated"},
+    "secondary_stat": {"value": "2,000", "label": "Contractors affected"},
+    "affected_roles": ["Customer Support", "Content Moderators"],
+    "companies": ["Meta"],
+    "tags": ["Big Tech", "Customer Service", "AI Agents"]
+  },
+  {
+    "headline": "Goldman Sachs AI Initiative Restructures Tech Teams",
+    "source": "Bloomberg",
+    "url": "https://bloomberg.com/goldman-ai-restructure",
+    "tier": 2,
+    "summary": "Goldman Sachs announces restructuring of technology teams as AI automation reduces need for manual data processing roles.",
+    "category": "Finance",
+    "key_stat": {"value": "15%", "label": "Team reduction"},
+    "secondary_stat": {"value": "300", "label": "Positions affected"},
+    "affected_roles": ["Data Analysts", "Backend Engineers"],
+    "companies": ["Goldman Sachs"],
+    "tags": ["Finance", "AI Automation", "Restructuring"]
+  },
+  {
+    "headline": "New Study: 60% of Customer Service Jobs Automatable",
+    "source": "MIT Technology Review",
+    "url": "https://technologyreview.com/cs-automation-study",
+    "tier": 2,
+    "summary": "MIT researchers publish comprehensive study showing majority of customer service positions could be automated with current AI technology.",
+    "category": "Research",
+    "key_stat": {"value": "60%", "label": "Jobs automatable"},
+    "secondary_stat": {"value": "2.5M", "label": "US jobs at risk"},
+    "affected_roles": ["Customer Support", "Call Center Staff"],
+    "companies": [],
+    "tags": ["Research", "Customer Service", "Job Displacement"]
+  }
+]

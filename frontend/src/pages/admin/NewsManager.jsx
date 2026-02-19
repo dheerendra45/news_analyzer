@@ -29,6 +29,8 @@ const NewsManager = () => {
   const [saving, setSaving] = useState(false);
   const [uploadMode, setUploadMode] = useState("form"); // "form" or "paste"
   const [pasteContent, setPasteContent] = useState("");
+  const [bulkCreating, setBulkCreating] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0 });
 
   // Form state
   const [formData, setFormData] = useState({
@@ -102,7 +104,39 @@ const NewsManager = () => {
     setPasteContent("");
   };
 
-  const handlePasteContent = () => {
+  const parseNewsItem = (item) => {
+    return {
+      title: item.headline || item.title || "",
+      description: item.summary || item.description || "",
+      summary: item.summary || "",
+      source: item.source || "",
+      source_url: item.url || item.source_url || "",
+      image_url: item.image_url || "",
+      category: item.category || "General",
+      tier:
+        item.tier === 1 || item.tier === "1"
+          ? "tier_1"
+          : item.tier === 2 || item.tier === "2"
+            ? "tier_2"
+            : item.tier === 3 || item.tier === "3"
+              ? "tier_3"
+              : "tier_2",
+      status: item.status || "draft",
+      tags: Array.isArray(item.tags) ? item.tags.join(", ") : item.tags || "",
+      affected_roles: Array.isArray(item.affected_roles)
+        ? item.affected_roles.join(", ")
+        : item.affected_roles || "",
+      companies: Array.isArray(item.companies)
+        ? item.companies.join(", ")
+        : item.companies || "",
+      key_stat_value: item.key_stat?.value || "",
+      key_stat_label: item.key_stat?.label || "",
+      secondary_stat_value: item.secondary_stat?.value || "",
+      secondary_stat_label: item.secondary_stat?.label || "",
+    };
+  };
+
+  const handlePasteContent = async () => {
     if (!pasteContent.trim()) {
       toast.error("Please paste some content first");
       return;
@@ -111,40 +145,77 @@ const NewsManager = () => {
     try {
       const parsed = JSON.parse(pasteContent);
 
-      setFormData({
-        title: parsed.headline || parsed.title || "",
-        description: parsed.summary || parsed.description || "",
-        summary: parsed.summary || "",
-        source: parsed.source || "",
-        source_url: parsed.url || parsed.source_url || "",
-        image_url: parsed.image_url || "",
-        category: parsed.category || "General",
-        tier:
-          parsed.tier === 1
-            ? "tier_1"
-            : parsed.tier === 2
-              ? "tier_2"
-              : parsed.tier === 3
-                ? "tier_3"
-                : "tier_2",
-        status: parsed.status || "draft",
-        tags: Array.isArray(parsed.tags)
-          ? parsed.tags.join(", ")
-          : parsed.tags || "",
-        affected_roles: Array.isArray(parsed.affected_roles)
-          ? parsed.affected_roles.join(", ")
-          : parsed.affected_roles || "",
-        companies: Array.isArray(parsed.companies)
-          ? parsed.companies.join(", ")
-          : parsed.companies || "",
-        key_stat_value: parsed.key_stat?.value || "",
-        key_stat_label: parsed.key_stat?.label || "",
-        secondary_stat_value: parsed.secondary_stat?.value || "",
-        secondary_stat_label: parsed.secondary_stat?.label || "",
-      });
+      // Check if it's an array (bulk create) or single object
+      if (Array.isArray(parsed)) {
+        // Bulk create mode
+        if (parsed.length === 0) {
+          toast.error("Array is empty. Please provide at least one news item.");
+          return;
+        }
 
-      toast.success("News content parsed and loaded successfully!");
-      setPasteContent("");
+        if (parsed.length > 20) {
+          toast.error("Maximum 20 items allowed at once.");
+          return;
+        }
+
+        // Confirm bulk creation
+        if (!window.confirm(`Create ${parsed.length} news items?`)) {
+          return;
+        }
+
+        setBulkCreating(true);
+        setBulkProgress({ current: 0, total: parsed.length });
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (let i = 0; i < parsed.length; i++) {
+          try {
+            const newsItem = parseNewsItem(parsed[i]);
+            const payload = {
+              ...newsItem,
+              tags: newsItem.tags
+                .split(",")
+                .map((t) => t.trim())
+                .filter(Boolean),
+              affected_roles: newsItem.affected_roles
+                .split(",")
+                .map((r) => r.trim())
+                .filter(Boolean),
+              companies: newsItem.companies
+                .split(",")
+                .map((c) => c.trim())
+                .filter(Boolean),
+            };
+
+            await newsAPI.create(payload);
+            successCount++;
+            setBulkProgress({ current: i + 1, total: parsed.length });
+          } catch (err) {
+            console.error(`Failed to create item ${i + 1}:`, err);
+            failCount++;
+          }
+        }
+
+        setBulkCreating(false);
+        setPasteContent("");
+
+        if (failCount === 0) {
+          toast.success(`Successfully created all ${successCount} news items!`);
+        } else {
+          toast.success(`Created ${successCount} items. ${failCount} failed.`, {
+            duration: 5000,
+          });
+        }
+
+        closeModal();
+        fetchNews();
+      } else {
+        // Single item mode - just load into form
+        setFormData(parseNewsItem(parsed));
+        toast.success("News content parsed and loaded successfully!");
+        setPasteContent("");
+      }
     } catch (err) {
       toast.error(
         "Invalid JSON format. Please check your content and try again.",
@@ -621,35 +692,74 @@ const NewsManager = () => {
               {uploadMode === "paste" && !editingNews && (
                 <div className="space-y-3">
                   <label className="form-label">Paste News JSON</label>
-                  <textarea
-                    value={pasteContent}
-                    onChange={(e) => setPasteContent(e.target.value)}
-                    className="form-textarea font-mono text-xs"
-                    rows={12}
-                    placeholder='Paste your JSON here... Format: {"headline": "...", "source": "...", "tier": 1, ...}'
-                  />
-                  <button
-                    type="button"
-                    onClick={handlePasteContent}
-                    className="btn-primary w-full"
-                  >
-                    Parse & Load JSON
-                  </button>
+                  {bulkCreating ? (
+                    <div className="bg-blue-50 border border-blue-200 rounded p-4 text-center">
+                      <p className="text-sm font-medium text-blue-900 mb-2">
+                        Creating news items...
+                      </p>
+                      <div className="text-2xl font-bold text-blue-600">
+                        {bulkProgress.current} / {bulkProgress.total}
+                      </div>
+                      <div className="mt-3 bg-white rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-blue-600 h-full transition-all duration-300"
+                          style={{
+                            width: `${(bulkProgress.current / bulkProgress.total) * 100}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <textarea
+                        value={pasteContent}
+                        onChange={(e) => setPasteContent(e.target.value)}
+                        className="form-textarea font-mono text-xs"
+                        rows={12}
+                        placeholder='Paste single object or array: [{"headline": "...", ...}, ...]'
+                      />
+                      <button
+                        type="button"
+                        onClick={handlePasteContent}
+                        className="btn-primary w-full"
+                      >
+                        Parse & Load JSON
+                      </button>
+                    </>
+                  )}
                   <div className="text-xs text-gray-500 space-y-1">
-                    <p>Expected format:</p>
-                    <pre className="bg-gray-100 p-2 rounded overflow-x-auto">
-                      {`{
+                    <p className="font-medium">Supported formats:</p>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="font-medium text-gray-700">
+                          Single item (loads into form):
+                        </p>
+                        <pre className="bg-gray-100 p-2 rounded overflow-x-auto">
+                          {`{
   "headline": "Story title",
   "source": "Publication",
   "url": "https://...",
   "tier": 1,
   "summary": "Brief summary",
   "key_stat": {"value": "1000", "label": "Jobs"},
-  "affected_roles": ["Role 1", "Role 2"],
+  "affected_roles": ["Role 1"],
   "companies": ["Company"],
   "tags": ["AI", "Layoffs"]
 }`}
-                    </pre>
+                        </pre>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-700">
+                          Multiple items (bulk create):
+                        </p>
+                        <pre className="bg-gray-100 p-2 rounded overflow-x-auto">
+                          {`[
+  {"headline": "Story 1", ...},
+  {"headline": "Story 2", ...}
+]`}
+                        </pre>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

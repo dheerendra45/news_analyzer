@@ -1,0 +1,257 @@
+{
+  "title": "AI Reshapes India's IT Workforce: The 17-Job Quarter",
+  "subtitle": "A 99.9% collapse in net hiring at India's top five IT firms marks a decisive shift from headcount-driven growth to AI-led productivity.",
+  "label": "Workforce Intelligence Briefing · 9MFY26 (April–December 2025)",
+  "tier": "tier_1",
+  "author": "Replaceable.ai Research",
+  "reading_time": 12,
+  "tags": ["AI", "IT Services", "India", "Hiring Freeze", "Automation"],
+  "status": "draft",
+  "summary": "India's top five IT firms added only 17 net employees in nine months, down from 17,764 the prior year. This signals a structural shift from headcount-driven growth to AI-led productivity models.",
+
+  "hero_context": "India's top five IT services firms—TCS, Infosys, Wipro, HCLTech and Tech Mahindra—added only 17 net employees in the first nine months of FY26, compared with 17,764 in the same period a year earlier. This is not a normal hiring slowdown; it reflects an AI-driven restructuring where mid-level and entry-level roles are being replaced by automation.",
+
+  "hero_stats": [
+    {
+      "label": "Net New Employees (Top 5, 9MFY26)",
+      "value": "17",
+      "target": 17,
+      "context": "Down from 17,764 prior year",
+      "percent": 1
+    },
+    {
+      "label": "Prior Year Net Additions (9MFY25)",
+      "value": "17,764",
+      "target": 17764,
+      "context": "Same period last year",
+      "percent": 85
+    },
+    {
+      "label": "TCS Net Headcount Change",
+      "value": "-25,000",
+      "target": 25000,
+      "context": "2% global workforce reduction",
+      "percent": 65
+    },
+    {
+      "label": "Firms Expecting Human-AI Teams by 2027",
+      "value": "97%",
+      "target": 97,
+      "context": "Industry-wide transformation",
+      "percent": 97
+    }
+  ],
+
+  "context_label": "Understanding the Shift",
+  "context_title": "From Headcount to *Intelligence*",
+  "context_intro": "For the first time in India's IT history, the largest employers are collectively shrinking rather than growing their workforces—not due to recession, but by strategic choice.",
+
+  "exec_summary": {
+    "paragraphs": [
+      "**The Story**: In 9MFY26, India's five largest IT services firms collectively added just 17 net employees, down from 17,764 during the same period a year earlier. TCS alone shed more than 25,000 employees as part of a 2% global workforce reduction.",
+      "**The Strategy**: Public commentary frames this as a structural reset, not a cyclical pause. Large IT firms are tightening benches and re-architecting delivery around AI and automation platforms.",
+      "**The Signal**: The freeze in net hiring for traditional roles alongside growth in AI headcount signals the end of the classic volume-based outsourcing model in its current form."
+    ],
+    "stats": [
+      {"value": "17", "label": "Net hires 9MFY26"},
+      {"value": "99.9%", "label": "Decline YoY"},
+      {"value": "1.25M", "label": "AI talent target by 2027"}
+    ]
+  },
+
+  "context_box": {
+    "title": "Why This Is Different From Previous Slowdowns",
+    "body": "Previous hiring freezes in Indian IT were driven by macroeconomic downturns—the 2008 financial crisis, the 2020 pandemic. This time, revenue is growing while headcount shrinks.",
+    "items": [
+      "Revenue per employee at TCS up 14% despite headcount cuts",
+      "AI automation handling 40%+ of testing and maintenance tasks",
+      "Campus hiring programs shifting from generic IT to AI-specific tracks",
+      "Industry body Nasscom targeting 1.25M AI-skilled workers by 2027"
+    ],
+    "note": "Source: Company earnings calls and Nasscom-Deloitte India report, 2025"
+  },
+
+  "metrics_label": "Market Impact Data",
+  "metrics_title": "By the *Numbers*",
+  "metrics_intro": "Key employment and industry metrics from the first nine months of FY26.",
+
+  "metrics": [
+    {
+      "label": "Net Hiring (Top 5 IT)",
+      "value": "17",
+      "change": "▼ 99.9% vs 9MFY25",
+      "changeType": "negative",
+      "context": "Near-total hiring freeze"
+    },
+    {
+      "label": "TCS Headcount Reduction",
+      "value": "25,000",
+      "change": "▼ 2% of workforce",
+      "changeType": "negative",
+      "context": "Largest single-firm cut"
+    },
+    {
+      "label": "AI-Skilled Workforce Target",
+      "value": "1.25M",
+      "change": "By 2027",
+      "changeType": "positive",
+      "context": "Nasscom target"
+    },
+    {
+      "label": "Firms Using Human-AI Teams",
+      "value": "97%",
+      "change": "▲ by 2027",
+      "changeType": "neutral",
+      "context": "Nasscom-Indeed forecast"
+    }
+  ],
+
+  "data_table": [
+    {
+      "company": "TCS",
+      "jobs": "-25,000",
+      "aiCited": true,
+      "quote": "2% global workforce reduction amid AI-driven restructuring"
+    },
+    {
+      "company": "Infosys",
+      "jobs": "+5,591",
+      "aiCited": true,
+      "quote": "\"Selective hiring in AI and cloud with overall bench tightening\""
+    },
+    {
+      "company": "Wipro",
+      "jobs": "+2,000",
+      "aiCited": true,
+      "quote": "Modest additions focused on digital and AI capabilities"
+    },
+    {
+      "company": "HCLTech",
+      "jobs": "+8,426",
+      "aiCited": false,
+      "quote": "Continued growth in digital services platform"
+    },
+    {
+      "company": "Tech Mahindra",
+      "jobs": "+9,000",
+      "aiCited": true,
+      "quote": "Recovery hiring after prior-year restructuring"
+    }
+  ],
+
+  "rpi_analysis": {
+    "role": "Software Developer (Services, Mid-Career)",
+    "workers": "5-10 years experience, Indian IT services",
+    "salary": "₹12-18L median CTC",
+    "score": 48,
+    "tasks": [
+      {"name": "Feature Coding & Implementation", "weight": "30%", "aps": 0.70, "hrf": 0.35, "level": "high"},
+      {"name": "Bug Fixing & Maintenance", "weight": "20%", "aps": 0.65, "hrf": 0.30, "level": "moderate"},
+      {"name": "Requirements Analysis & Design", "weight": "15%", "aps": 0.30, "hrf": 0.75, "level": "low"},
+      {"name": "Unit & Integration Testing", "weight": "15%", "aps": 0.80, "hrf": 0.20, "level": "high"},
+      {"name": "Code Review & Mentoring", "weight": "10%", "aps": 0.45, "hrf": 0.70, "level": "moderate"},
+      {"name": "Client Communication", "weight": "10%", "aps": 0.25, "hrf": 0.85, "level": "low"}
+    ]
+  },
+
+  "insight_block": {
+    "quote": "We are not cutting jobs—we are reshaping delivery. The engineers who thrive will be those who can orchestrate AI, not compete with it. The traditional pyramid staffing model is permanently obsolete.",
+    "attribution": "Senior VP, Delivery Operations, Top-3 Indian IT Firm (off-record), January 2026"
+  },
+
+  "risk_buckets": [
+    {
+      "type": "critical",
+      "number": "01",
+      "title": "Critical Exposure",
+      "criteria": "APS ≥ 0.7 · Direct automation candidates",
+      "items": [
+        "Manual QA testers and test execution roles",
+        "L1/L2 IT support and helpdesk operators",
+        "Data entry and basic report generation staff",
+        "Routine application maintenance developers",
+        "Basic code documentation and migration workers"
+      ]
+    },
+    {
+      "type": "augment",
+      "number": "02",
+      "title": "Augmentation Zone",
+      "criteria": "APS 0.4-0.7 · Productivity will be AI-enhanced",
+      "items": [
+        "Mid-level application developers (feature coding)",
+        "Business analysts and requirements gatherers",
+        "DevOps engineers (infrastructure automation)",
+        "Technical project managers",
+        "Systems integration specialists"
+      ]
+    },
+    {
+      "type": "resilient",
+      "number": "03",
+      "title": "Human Anchors",
+      "criteria": "APS < 0.4 · Durably human-dependent",
+      "items": [
+        "Solution architects and system designers",
+        "Client relationship managers",
+        "AI/ML specialists and platform engineers",
+        "Change management and transformation leads",
+        "Enterprise security architects"
+      ]
+    }
+  ],
+
+  "timeline": [
+    {
+      "date": "Now – Q1 FY27",
+      "event": "Hiring Freeze Deepens",
+      "impact": "Top five Indian IT firms report near-zero net hiring. TCS continues workforce rationalization. Campus hiring for generic IT roles remains muted. Internal AI tools capture increasing share of coding, testing and support tasks."
+    },
+    {
+      "date": "Q2 – Q4 FY27",
+      "event": "AI Delivery Models Scale",
+      "impact": "Human-AI team structures become the dominant delivery model. Hiring focuses on AI engineers, cloud architects and data specialists. Legacy application maintenance and manual QA roles see sustained net declines."
+    },
+    {
+      "date": "FY28",
+      "event": "Structural Equilibrium",
+      "impact": "97% of Indian IT companies operate workforce as human-AI teams. Sector employment stabilizes at leaner mix of high-skill roles. India's AI talent pool exceeds 1.25 million workers."
+    },
+    {
+      "date": "FY29+",
+      "event": "New Growth Phase",
+      "impact": "Revenue per employee reaches new highs. New service categories emerge around AI orchestration, governance and oversight. Entry-level roles redefined as AI-augmented rather than manual execution."
+    }
+  ],
+
+  "guidance": [
+    {
+      "title": "For Workers in Affected IT Roles",
+      "items": [
+        "Make AI tools default, not optional: integrate code assistants and AI-based test generation into daily workflows",
+        "Shift your task mix upward: seek responsibilities in design, architecture and client-facing problem-solving",
+        "Stack AI with domain depth: pair AI skills with a vertical (banking, telecom, healthcare) to become the go-to engineer",
+        "Quantify and showcase impact: track time saved and quality gains from AI-assisted delivery",
+        "Prepare transition options: map pivots into solution architect, SRE, MLOps or AI platform engineer roles"
+      ]
+    },
+    {
+      "title": "For Students & Adjacent Professionals",
+      "items": [
+        "Choose AI-adjacent entry paths: data engineering, analytics, product operations over pure support functions",
+        "Develop 'translation' skills: build fluency in both business and AI concepts",
+        "Anchor in change and governance: explore AI governance, risk and compliance functions",
+        "Use the hiring freeze as a signal: prioritize AI-literate skill portfolios before graduation",
+        "Leverage ecosystem programmes: tap into large-scale AI skilling initiatives targeting 1.25M AI talent by 2027"
+      ]
+    }
+  ],
+
+  "sources": [
+    {"title": "Top IT firms add just 17 staff in nine months", "url": "https://economictimes.indiatimes.com/topic/tcs-infosys-wipro", "date": "January 16, 2026"},
+    {"title": "Tech wreck: Job cuts at TCS drag Big 5 net hiring to 17", "url": "https://timesofindia.indiatimes.com/business/india-business/tech-wreck", "date": "January 16, 2026"},
+    {"title": "AI and Automation Force Top Indian IT Firms to Freeze Net Hiring", "url": "https://www.aitechsuite.com/ai-news/ai-automation-freeze", "date": "January 18, 2026"},
+    {"title": "Human-AI collaboration to shape work by 2027, Nasscom-Indeed report", "url": "https://www.storyboard18.com/how-it-works/human-ai-collab", "date": "January 12, 2026"},
+    {"title": "India's AI Talent Pool to Grow to 1.25 Million by 2027", "url": "https://indiaai.gov.in/article/india-ai-talent-pool", "date": "August 21, 2024"}
+  ]
+}

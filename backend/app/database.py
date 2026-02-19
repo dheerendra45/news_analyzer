@@ -6,7 +6,7 @@ from pymongo import IndexModel, ASCENDING, DESCENDING
 from app.config import settings
 
 # MongoDB client instance
-client: AsyncIOMotorClient = None
+client = None
 database = None
 
 

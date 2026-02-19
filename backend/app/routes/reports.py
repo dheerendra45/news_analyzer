@@ -160,7 +160,16 @@ async def create_report(
         guidance=report_data.guidance,
         sources=report_data.sources,
         is_rich_report=report_data.is_rich_report,
-        html_content=report_data.html_content
+        html_content=report_data.html_content,
+        extra_fields=report_data.extra_fields,
+        context_label=report_data.context_label,
+        context_title=report_data.context_title,
+        context_intro=report_data.context_intro,
+        metrics_label=report_data.metrics_label,
+        metrics_title=report_data.metrics_title,
+        metrics_intro=report_data.metrics_intro,
+        context_box=report_data.context_box,
+        insight_block=report_data.insight_block
     )
     
     result = await collection.insert_one(report_doc)
