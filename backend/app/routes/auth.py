@@ -46,9 +46,16 @@ async def login(login_data: LoginRequest):
     """
     Login and get access token
     
-    - **email**: Registered email address
+    - **email**: Must be from an allowed domain (@replaceable.ai or @attacked.ai)
     - **password**: Account password
     """
+    # Restrict login to allowed domains only
+    if not AuthService.is_valid_admin_domain(login_data.email):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Login restricted to @replaceable.ai and @attacked.ai emails only",
+        )
+    
     user = await AuthService.authenticate_user(
         login_data.email,
         login_data.password
