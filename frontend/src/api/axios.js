@@ -23,7 +23,7 @@ api.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor for error handling
@@ -34,12 +34,15 @@ api.interceptors.response.use(
       // Clear token and redirect to login
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      if (window.location.pathname.startsWith("/admin")) {
+      if (
+        window.location.pathname !== "/login" &&
+        window.location.pathname !== "/register"
+      ) {
         window.location.href = "/login";
       }
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

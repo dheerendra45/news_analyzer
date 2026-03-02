@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { LogOut, User, LayoutDashboard, Menu, X } from "lucide-react";
+import { LogOut, LogIn, User, LayoutDashboard, Menu, X } from "lucide-react";
 
 const Navbar = () => {
   const location = useLocation();
@@ -90,7 +90,15 @@ const Navbar = () => {
                 </button>
               </div>
             </div>
-          ) : null}
+          ) : (
+            <Link
+              to="/login"
+              className="flex items-center gap-2 font-inter text-xs font-semibold uppercase tracking-wider bg-crimson text-white px-4 py-2 hover:bg-deep-crimson transition-colors"
+            >
+              <LogIn size={14} />
+              Sign In
+            </Link>
+          )}
         </nav>
 
         {/* Mobile Menu Button */}
@@ -166,7 +174,16 @@ const Navbar = () => {
                   </button>
                 </div>
               </>
-            ) : null}
+            ) : (
+              <Link
+                to="/login"
+                onClick={closeMobileMenu}
+                className="flex items-center gap-3 font-inter text-lg font-medium px-6 py-4 text-crimson hover:bg-white/5 transition-colors rounded-lg"
+              >
+                <LogIn size={20} />
+                Sign In
+              </Link>
+            )}
           </div>
         </nav>
       </div>

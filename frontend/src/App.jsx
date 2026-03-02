@@ -5,11 +5,12 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 
-// Public Pages
+// Auth Pages
 import Landing from "./pages/Landing";
 import Archive from "./pages/Archive";
 import ReportDetail from "./pages/ReportDetail";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 
 // Admin Pages
 import Dashboard from "./pages/admin/Dashboard";
@@ -23,8 +24,8 @@ import "./styles/admin-cards.css";
 
 const Layout = ({ children }) => {
   const location = useLocation();
-  const hideNavbarRoutes = ["/login"];
-  const hideFooterRoutes = ["/login", "/admin"];
+  const hideNavbarRoutes = ["/login", "/register"];
+  const hideFooterRoutes = ["/login", "/register", "/admin"];
 
   // ReportDetail has its own navbar/footer
   const isReportPage = location.pathname.startsWith("/report/");
@@ -48,11 +49,35 @@ const AppRoutes = () => {
   return (
     <Layout>
       <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<Landing />} />
-        <Route path="/archive" element={<Archive />} />
-        <Route path="/report/:id" element={<ReportDetail />} />
+        {/* Auth Routes (public) */}
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* Protected Routes - require login */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Landing />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/archive"
+          element={
+            <ProtectedRoute>
+              <Archive />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/report/:id"
+          element={
+            <ProtectedRoute>
+              <ReportDetail />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Admin Routes */}
         <Route
@@ -80,8 +105,8 @@ const AppRoutes = () => {
           }
         />
 
-        {/* Catch-all 404 - Redirect to home */}
-        <Route path="*" element={<Landing />} />
+        {/* Catch-all 404 - Redirect to login */}
+        <Route path="*" element={<Login />} />
       </Routes>
     </Layout>
   );
